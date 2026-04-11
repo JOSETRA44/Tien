@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find c:UsersUSERsourceAPPS -type f -name *.gradle -o -name AndroidManifest.xml)"
+    ]
+  }
+}
