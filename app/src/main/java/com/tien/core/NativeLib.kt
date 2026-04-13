@@ -39,6 +39,16 @@ object NativeLib {
      */
     external fun insertNote(path: String, title: String, content: String): Boolean
 
+    /**
+     * Updates an existing note.
+     */
+    external fun updateNote(path: String, id: Long, title: String, content: String): Boolean
+
+    /**
+     * Deletes a note by id.
+     */
+    external fun deleteNote(path: String, id: Long): Boolean
+
     // ── Read operations ───────────────────────────────────────────────────────
 
     /**

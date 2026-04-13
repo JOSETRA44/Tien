@@ -103,6 +103,39 @@ extern "C" {
         return db->insertNote(title, content) ? JNI_TRUE : JNI_FALSE;
     }
 
+    JNIEXPORT jboolean JNICALL
+        Java_com_tien_core_NativeLib_updateNote(
+            JNIEnv* env, jobject /* thiz */,
+            jstring jPath, jlong jId, jstring jTitle, jstring jContent) {
+
+        const std::string path = jstrToStd(env, jPath);
+        const std::string title = jstrToStd(env, jTitle);
+        const std::string content = jstrToStd(env, jContent);
+        if (path.empty() || title.empty() || jId <= 0) {
+            return JNI_FALSE;
+        }
+
+        auto db = tien::db::DatabaseManager::open(path);
+        if (!db) return JNI_FALSE;
+
+        return db->updateNote(static_cast<int64_t>(jId), title, content) ? JNI_TRUE : JNI_FALSE;
+    }
+
+    JNIEXPORT jboolean JNICALL
+        Java_com_tien_core_NativeLib_deleteNote(
+            JNIEnv* env, jobject /* thiz */, jstring jPath, jlong jId) {
+
+        const std::string path = jstrToStd(env, jPath);
+        if (path.empty() || jId <= 0) {
+            return JNI_FALSE;
+        }
+
+        auto db = tien::db::DatabaseManager::open(path);
+        if (!db) return JNI_FALSE;
+
+        return db->deleteNote(static_cast<int64_t>(jId)) ? JNI_TRUE : JNI_FALSE;
+    }
+
     JNIEXPORT jstring JNICALL
         Java_com_tien_core_NativeLib_getNotes(
             JNIEnv* env, jobject /* thiz */, jstring jPath) {

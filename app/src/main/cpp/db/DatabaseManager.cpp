@@ -228,6 +228,73 @@ bool DatabaseManager::insertNote(const std::string& title,
     return true;
 }
 
+bool DatabaseManager::updateNote(int64_t id,
+                                 const std::string& title,
+                                 const std::string& content) {
+    if (!db_) {
+        utils::e("DatabaseManager::updateNote — no open connection");
+        return false;
+    }
+
+    auto stmt = Stmt::prepare(db_,
+        "UPDATE notes SET title = ?, content = ?, timestamp = strftime('%s','now') WHERE id = ?");
+    if (!stmt) {
+        utils::e("DatabaseManager::updateNote — prepare failed");
+        return false;
+    }
+
+    if (!stmt->bindText(1, title) || !stmt->bindText(2, content) || !stmt->bindInt64(3, id)) {
+        utils::e("DatabaseManager::updateNote — bind failed");
+        return false;
+    }
+
+    int rc = stmt->step();
+    if (rc != SQLITE_DONE) {
+        utils::e("DatabaseManager::updateNote — step returned %d: %s",
+                 rc, sqlite3_errmsg(db_));
+        return false;
+    }
+
+    if (sqlite3_changes(db_) <= 0) {
+        utils::e("DatabaseManager::updateNote — note id %lld not found", static_cast<long long>(id));
+        return false;
+    }
+
+    return true;
+}
+
+bool DatabaseManager::deleteNote(int64_t id) {
+    if (!db_) {
+        utils::e("DatabaseManager::deleteNote — no open connection");
+        return false;
+    }
+
+    auto stmt = Stmt::prepare(db_, "DELETE FROM notes WHERE id = ?");
+    if (!stmt) {
+        utils::e("DatabaseManager::deleteNote — prepare failed");
+        return false;
+    }
+
+    if (!stmt->bindInt64(1, id)) {
+        utils::e("DatabaseManager::deleteNote — bind failed");
+        return false;
+    }
+
+    int rc = stmt->step();
+    if (rc != SQLITE_DONE) {
+        utils::e("DatabaseManager::deleteNote — step returned %d: %s",
+                 rc, sqlite3_errmsg(db_));
+        return false;
+    }
+
+    if (sqlite3_changes(db_) <= 0) {
+        utils::e("DatabaseManager::deleteNote — note id %lld not found", static_cast<long long>(id));
+        return false;
+    }
+
+    return true;
+}
+
 std::vector<tien::core::Note> DatabaseManager::getAllNotes() {
     if (!db_) {
         utils::e("DatabaseManager::getAllNotes — no open connection");

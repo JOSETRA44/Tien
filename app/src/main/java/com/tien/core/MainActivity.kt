@@ -1,34 +1,32 @@
 package com.tien.core
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.widget.TextView
-import com.tien.core.databinding.ActivityMainBinding
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import com.tien.core.ui.NotesScreen
+import com.tien.core.ui.theme.TienTheme
 
-class MainActivity : AppCompatActivity() {
-
-    private lateinit var binding: ActivityMainBinding
+class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            val systemDark = isSystemInDarkTheme()
+            var darkTheme by rememberSaveable { mutableStateOf(systemDark) }
 
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
-        // Example of a call to a native method
-        binding.sampleText.text = stringFromJNI()
-    }
-
-    /**
-     * A native method that is implemented by the 'core' native library,
-     * which is packaged with this application.
-     */
-    external fun stringFromJNI(): String
-
-    companion object {
-        // Used to load the 'core' library on application startup.
-        init {
-            System.loadLibrary("core")
+            TienTheme(darkTheme = darkTheme) {
+                NotesScreen(
+                    isDarkTheme = darkTheme,
+                    onThemeToggle = { darkTheme = !darkTheme }
+                )
+            }
         }
     }
 }

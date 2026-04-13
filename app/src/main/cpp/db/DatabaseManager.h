@@ -76,6 +76,8 @@ public:
 
     // ── CRUD — Notes ───────────────────────────────────────────────────
     bool insertNote(const std::string& title, const std::string& content);
+    bool updateNote(int64_t id, const std::string& title, const std::string& content);
+    bool deleteNote(int64_t id);
     std::vector<tien::core::Note> getAllNotes();
 
     // Execute a raw SQL statement.  Returns true on success.
