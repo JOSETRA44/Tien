@@ -80,6 +80,12 @@ public:
     bool deleteNote(int64_t id);
     std::vector<tien::core::Note> getAllNotes();
 
+    // ── CRUD — Tasks ───────────────────────────────────────────────────
+    bool insertTask(const std::string& title, const std::string& details, int64_t dueAt, int priority);
+    bool toggleTaskDone(int64_t id, bool done);
+    bool deleteTask(int64_t id);
+    std::vector<tien::core::Task> getAllTasks();
+
     // Execute a raw SQL statement.  Returns true on success.
     bool execute(const std::string& sql);
 

@@ -49,6 +49,21 @@ object NativeLib {
      */
     external fun deleteNote(path: String, id: Long): Boolean
 
+    /**
+     * Inserts a task with due date.
+     */
+    external fun insertTask(path: String, title: String, details: String, dueAt: Long, priority: Int): Boolean
+
+    /**
+     * Toggles task completion.
+     */
+    external fun toggleTaskDone(path: String, id: Long, done: Boolean): Boolean
+
+    /**
+     * Deletes a task by id.
+     */
+    external fun deleteTask(path: String, id: Long): Boolean
+
     // ── Read operations ───────────────────────────────────────────────────────
 
     /**
@@ -64,4 +79,9 @@ object NativeLib {
      * @param path  Absolute path to the `.db` file.
      */
     external fun getNotes(path: String): String
+
+    /**
+     * Returns all tasks as JSON.
+     */
+    external fun getTasks(path: String): String
 }

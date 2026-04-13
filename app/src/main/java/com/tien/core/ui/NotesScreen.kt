@@ -23,21 +23,16 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.ClearAll
 import androidx.compose.material.icons.outlined.DarkMode
-import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Sort
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material.icons.outlined.TaskAlt
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -46,13 +41,18 @@ import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -89,33 +89,31 @@ fun NotesScreen(
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val listState = rememberLazyListState()
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var showSheet by rememberSaveable { mutableStateOf(false) }
+    val noteSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val taskSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var showNoteSheet by rememberSaveable { mutableStateOf(false) }
+    var showTaskSheet by rememberSaveable { mutableStateOf(false) }
     var sheetMode by rememberSaveable { mutableStateOf(SheetMode.CREATE) }
     var editingNoteId by rememberSaveable { mutableStateOf<Long?>(null) }
     var draftTitle by rememberSaveable { mutableStateOf("") }
     var draftContent by rememberSaveable { mutableStateOf("") }
-    var deleteTarget by rememberSaveable { mutableStateOf<Note?>(null) }
-
     var searchActive by rememberSaveable { mutableStateOf(false) }
     var sortExpanded by rememberSaveable { mutableStateOf(false) }
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) } // 0=Notas,1=Agenda
+    var deletedNote by rememberSaveable { mutableStateOf<Note?>(null) }
 
     LaunchedEffect(uiState.errorMessage) {
-        uiState.errorMessage?.let { msg ->
-            snackbarHost.showSnackbar(msg)
+        uiState.errorMessage?.let {
+            snackbarHost.showSnackbar(it)
             vm.dismissError()
         }
     }
 
-    LaunchedEffect(deleteTarget) {
-        val target = deleteTarget ?: return@LaunchedEffect
-        val result = snackbarHost.showSnackbar(
-            message = "Nota eliminada",
-            actionLabel = "Deshacer",
-            withDismissAction = true
-        )
+    LaunchedEffect(deletedNote) {
+        val note = deletedNote ?: return@LaunchedEffect
+        val result = snackbarHost.showSnackbar("Nota eliminada", actionLabel = "Deshacer")
         if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
-            vm.insertNote(target.title, target.content)
+            vm.insertNote(note.title, note.content)
         }
     }
 
@@ -125,54 +123,38 @@ fun NotesScreen(
         topBar = {
             Column {
                 TopAppBar(
-                    title = {
-                        Text(
-                            text = "Tien",
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                    },
+                    title = { Text("Tien Productivity") },
                     actions = {
-                        IconButton(onClick = { sortExpanded = true }) {
-                            Icon(Icons.Outlined.Sort, contentDescription = "Ordenar")
-                        }
-                        DropdownMenu(
-                            expanded = sortExpanded,
-                            onDismissRequest = { sortExpanded = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Más recientes") },
-                                onClick = {
-                                    vm.setSort(NotesSort.NEWEST)
-                                    sortExpanded = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Más antiguas") },
-                                onClick = {
-                                    vm.setSort(NotesSort.OLDEST)
-                                    sortExpanded = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Título (A-Z)") },
-                                onClick = {
-                                    vm.setSort(NotesSort.TITLE)
-                                    sortExpanded = false
-                                }
-                            )
+                        if (selectedTab == 0) {
+                            IconButton(onClick = { sortExpanded = true }) {
+                                Icon(Icons.Outlined.Sort, contentDescription = "Ordenar")
+                            }
+                            DropdownMenu(
+                                expanded = sortExpanded,
+                                onDismissRequest = { sortExpanded = false }
+                            ) {
+                                DropdownMenuItem(text = { Text("Más recientes") }, onClick = {
+                                    vm.setSort(NotesSort.NEWEST); sortExpanded = false
+                                })
+                                DropdownMenuItem(text = { Text("Más antiguas") }, onClick = {
+                                    vm.setSort(NotesSort.OLDEST); sortExpanded = false
+                                })
+                                DropdownMenuItem(text = { Text("Título (A-Z)") }, onClick = {
+                                    vm.setSort(NotesSort.TITLE); sortExpanded = false
+                                })
+                            }
                         }
 
-                        IconButton(onClick = { onThemeToggle() }) {
+                        IconButton(onClick = onThemeToggle) {
                             Icon(
                                 imageVector = if (isDarkTheme) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
                                 contentDescription = "Cambiar tema"
                             )
                         }
-
                         IconButton(onClick = { searchActive = !searchActive }) {
                             Icon(
                                 imageVector = if (searchActive) Icons.Default.Close else Icons.Default.Search,
-                                contentDescription = if (searchActive) "Cerrar búsqueda" else "Buscar"
+                                contentDescription = "Buscar"
                             )
                         }
                     },
@@ -182,6 +164,21 @@ fun NotesScreen(
                         scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 )
+
+                TabRow(selectedTabIndex = selectedTab) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        text = { Text("Notas") },
+                        icon = { Icon(Icons.Outlined.Description, contentDescription = null) }
+                    )
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        text = { Text("Agenda") },
+                        icon = { Icon(Icons.Outlined.TaskAlt, contentDescription = null) }
+                    )
+                }
 
                 AnimatedVisibility(
                     visible = searchActive,
@@ -196,12 +193,10 @@ fun NotesScreen(
                                 onSearch = {},
                                 expanded = false,
                                 onExpandedChange = {},
-                                placeholder = { Text("Buscar notas…") },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Search, contentDescription = null)
-                                },
+                                placeholder = { Text("Buscar en notas y tareas...") },
+                                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                                 trailingIcon = {
-                                    if (uiState.searchQuery.isNotEmpty()) {
+                                    if (uiState.searchQuery.isNotBlank()) {
                                         IconButton(onClick = { vm.setSearchQuery("") }) {
                                             Icon(Icons.Default.Close, contentDescription = "Limpiar")
                                         }
@@ -218,7 +213,7 @@ fun NotesScreen(
                     )
                 }
 
-                if (uiState.availableDayKeys.isNotEmpty()) {
+                if (selectedTab == 1 && uiState.taskDays.isNotEmpty()) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -227,33 +222,27 @@ fun NotesScreen(
                     ) {
                         AssistChip(
                             onClick = { vm.setSelectedDay(null) },
-                            label = { Text("Todo") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Outlined.ClearAll,
-                                    contentDescription = null
-                                )
-                            },
+                            label = { Text("Todos") },
+                            leadingIcon = { Icon(Icons.Outlined.CalendarMonth, contentDescription = null) },
                             colors = AssistChipDefaults.assistChipColors(
                                 containerColor = if (uiState.selectedDayKey == null) {
-                                    MaterialTheme.colorScheme.secondaryContainer
+                                    MaterialTheme.colorScheme.primaryContainer
                                 } else {
                                     MaterialTheme.colorScheme.surfaceVariant
                                 }
                             )
                         )
-                        uiState.availableDayKeys.take(3).forEach { day ->
-                            FilterChip(
-                                selected = uiState.selectedDayKey == day,
+                        uiState.taskDays.take(3).forEach { day ->
+                            AssistChip(
                                 onClick = { vm.setSelectedDay(day) },
                                 label = { Text(formatDayLabel(day)) },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Outlined.CalendarMonth,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(FilterChipDefaults.IconSize)
-                                    )
-                                }
+                                colors = AssistChipDefaults.assistChipColors(
+                                    containerColor = if (uiState.selectedDayKey == day) {
+                                        MaterialTheme.colorScheme.secondaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                    }
+                                )
                             )
                         }
                     }
@@ -263,16 +252,18 @@ fun NotesScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    sheetMode = SheetMode.CREATE
-                    editingNoteId = null
-                    draftTitle = ""
-                    draftContent = ""
-                    showSheet = true
-                },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    if (selectedTab == 0) {
+                        sheetMode = SheetMode.CREATE
+                        editingNoteId = null
+                        draftTitle = ""
+                        draftContent = ""
+                        showNoteSheet = true
+                    } else {
+                        showTaskSheet = true
+                    }
+                }
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Nueva nota")
+                Icon(Icons.Default.Add, contentDescription = "Crear")
             }
         }
     ) { innerPadding ->
@@ -281,73 +272,41 @@ fun NotesScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            when {
-                uiState.isLoading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
+            if (uiState.isLoading) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            } else {
+                if (selectedTab == 0) {
+                    NotesList(
+                        notes = uiState.filteredNotes,
+                        onEdit = { selected ->
+                            sheetMode = SheetMode.EDIT
+                            editingNoteId = selected.id
+                            draftTitle = selected.title
+                            draftContent = selected.content
+                            showNoteSheet = true
+                        },
+                        onDelete = { selected ->
+                            vm.deleteNote(selected.id)
+                            deletedNote = selected
+                        },
+                        listState = listState
                     )
-                }
-
-                uiState.filtered.isEmpty() -> {
-                    EmptyState(
-                        isSearching = uiState.searchQuery.isNotBlank() || uiState.selectedDayKey != null,
-                        modifier = Modifier.align(Alignment.Center)
+                } else {
+                    AgendaList(
+                        uiState = uiState,
+                        onToggleDone = { id, done -> vm.toggleTaskDone(id, done) },
+                        onDeleteTask = { id -> vm.deleteTask(id) }
                     )
-                }
-
-                else -> {
-                    LazyColumn(
-                        state = listState,
-                        contentPadding = PaddingValues(
-                            start = 16.dp,
-                            end = 16.dp,
-                            top = 12.dp,
-                            bottom = 88.dp
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        uiState.groupedByDay.forEach { (dayKey, notes) ->
-                            item(key = "header-$dayKey") {
-                                Text(
-                                    text = formatDayLabel(dayKey),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                                )
-                                HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.outlineVariant
-                                )
-                            }
-                            items(items = notes, key = { it.id }) { note ->
-                                NoteCard(
-                                    note = note,
-                                    onEdit = { selected ->
-                                        sheetMode = SheetMode.EDIT
-                                        editingNoteId = selected.id
-                                        draftTitle = selected.title
-                                        draftContent = selected.content
-                                        showSheet = true
-                                    },
-                                    onDelete = { selected ->
-                                        vm.deleteNote(selected.id)
-                                        deleteTarget = selected
-                                    },
-                                    modifier = Modifier.animateItem()
-                                )
-                            }
-                        }
-                    }
                 }
             }
         }
     }
 
-    if (showSheet) {
+    if (showNoteSheet) {
         AddNoteSheet(
-            sheetState = sheetState,
+            sheetState = noteSheetState,
             onDismiss = {
-                scope.launch { sheetState.hide() }.invokeOnCompletion { showSheet = false }
+                scope.launch { noteSheetState.hide() }.invokeOnCompletion { showNoteSheet = false }
             },
             initialTitle = draftTitle,
             initialContent = draftContent,
@@ -362,34 +321,97 @@ fun NotesScreen(
             }
         )
     }
+
+    if (showTaskSheet) {
+        AddTaskSheet(
+            sheetState = taskSheetState,
+            onDismiss = {
+                scope.launch { taskSheetState.hide() }.invokeOnCompletion { showTaskSheet = false }
+            },
+            onSave = { title, details, dueAt, priority ->
+                vm.insertTask(title, details, dueAt, priority)
+            }
+        )
+    }
+}
+
+@Composable
+private fun NotesList(
+    notes: List<Note>,
+    onEdit: (Note) -> Unit,
+    onDelete: (Note) -> Unit,
+    listState: androidx.compose.foundation.lazy.LazyListState
+) {
+    if (notes.isEmpty()) {
+        EmptyState("No hay notas todavía", "Crea una nota con el botón +")
+        return
+    }
+    LazyColumn(
+        state = listState,
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 88.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        items(items = notes, key = { it.id }) { note ->
+            NoteCard(
+                note = note,
+                onEdit = onEdit,
+                onDelete = onDelete,
+                modifier = Modifier.animateItem()
+            )
+        }
+    }
+}
+
+@Composable
+private fun AgendaList(
+    uiState: com.tien.core.viewmodel.NotesUiState,
+    onToggleDone: (Long, Boolean) -> Unit,
+    onDeleteTask: (Long) -> Unit
+) {
+    if (uiState.agendaTasks.isEmpty()) {
+        EmptyState("Sin tareas en agenda", "Programa tareas con fecha de plazo desde +")
+        return
+    }
+    LazyColumn(
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 88.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        items(uiState.agendaTasks, key = { it.id }) { task ->
+            TaskCard(
+                task = task,
+                onToggleDone = { done -> onToggleDone(task.id, done) },
+                onDelete = { onDeleteTask(task.id) },
+                modifier = Modifier.animateItem()
+            )
+        }
+    }
 }
 
 @Composable
 private fun EmptyState(
-    isSearching: Boolean,
-    modifier: Modifier = Modifier
+    title: String,
+    body: String
 ) {
     Column(
-        modifier = modifier.padding(32.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Outlined.Edit,
+            imageVector = Icons.Outlined.TaskAlt,
             contentDescription = null,
             modifier = Modifier.size(72.dp),
             tint = MaterialTheme.colorScheme.outline
         )
         Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = if (isSearching) "Sin resultados" else "Aún no hay notas",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        Text(title, style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = if (isSearching) "Prueba con otros filtros o palabras."
-            else "Pulsa + para crear tu primera nota.",
+            body,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center

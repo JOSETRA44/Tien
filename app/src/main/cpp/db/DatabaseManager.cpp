@@ -191,6 +191,16 @@ bool DatabaseManager::initSchema() {
             content    TEXT    NOT NULL DEFAULT '',
             timestamp  INTEGER NOT NULL DEFAULT (strftime('%s','now'))
         );
+
+        CREATE TABLE IF NOT EXISTS tasks (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            title       TEXT    NOT NULL,
+            details     TEXT    NOT NULL DEFAULT '',
+            due_at      INTEGER NOT NULL,
+            created_at  INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+            priority    INTEGER NOT NULL DEFAULT 1,
+            is_done     INTEGER NOT NULL DEFAULT 0
+        );
     )";
 
     return execute(kSql);
@@ -322,6 +332,108 @@ std::vector<tien::core::Note> DatabaseManager::getAllNotes() {
 
     utils::d("DatabaseManager::getAllNotes — returned %zu notes", notes.size());
     return notes;
+}
+
+bool DatabaseManager::insertTask(const std::string& title,
+                                 const std::string& details,
+                                 int64_t dueAt,
+                                 int priority) {
+    if (!db_) {
+        utils::e("DatabaseManager::insertTask — no open connection");
+        return false;
+    }
+
+    auto stmt = Stmt::prepare(db_,
+        "INSERT INTO tasks (title, details, due_at, priority, is_done, created_at) "
+        "VALUES (?, ?, ?, ?, 0, strftime('%s','now'))");
+    if (!stmt) {
+        utils::e("DatabaseManager::insertTask — prepare failed");
+        return false;
+    }
+
+    if (!stmt->bindText(1, title) ||
+        !stmt->bindText(2, details) ||
+        !stmt->bindInt64(3, dueAt) ||
+        !stmt->bindInt64(4, static_cast<int64_t>(priority))) {
+        utils::e("DatabaseManager::insertTask — bind failed");
+        return false;
+    }
+
+    return stmt->step() == SQLITE_DONE;
+}
+
+bool DatabaseManager::toggleTaskDone(int64_t id, bool done) {
+    if (!db_) {
+        utils::e("DatabaseManager::toggleTaskDone — no open connection");
+        return false;
+    }
+
+    auto stmt = Stmt::prepare(db_, "UPDATE tasks SET is_done = ? WHERE id = ?");
+    if (!stmt) {
+        utils::e("DatabaseManager::toggleTaskDone — prepare failed");
+        return false;
+    }
+
+    if (!stmt->bindInt64(1, done ? 1 : 0) || !stmt->bindInt64(2, id)) {
+        utils::e("DatabaseManager::toggleTaskDone — bind failed");
+        return false;
+    }
+
+    const int rc = stmt->step();
+    if (rc != SQLITE_DONE) return false;
+    return sqlite3_changes(db_) > 0;
+}
+
+bool DatabaseManager::deleteTask(int64_t id) {
+    if (!db_) {
+        utils::e("DatabaseManager::deleteTask — no open connection");
+        return false;
+    }
+
+    auto stmt = Stmt::prepare(db_, "DELETE FROM tasks WHERE id = ?");
+    if (!stmt) {
+        utils::e("DatabaseManager::deleteTask — prepare failed");
+        return false;
+    }
+
+    if (!stmt->bindInt64(1, id)) {
+        utils::e("DatabaseManager::deleteTask — bind failed");
+        return false;
+    }
+
+    const int rc = stmt->step();
+    if (rc != SQLITE_DONE) return false;
+    return sqlite3_changes(db_) > 0;
+}
+
+std::vector<tien::core::Task> DatabaseManager::getAllTasks() {
+    if (!db_) {
+        utils::e("DatabaseManager::getAllTasks — no open connection");
+        return {};
+    }
+
+    auto stmt = Stmt::prepare(db_,
+        "SELECT id, title, details, due_at, created_at, priority, is_done "
+        "FROM tasks ORDER BY due_at ASC");
+    if (!stmt) {
+        utils::e("DatabaseManager::getAllTasks — prepare failed");
+        return {};
+    }
+
+    std::vector<tien::core::Task> tasks;
+    while (stmt->step() == SQLITE_ROW) {
+        tasks.emplace_back(tien::core::Task{
+            stmt->columnInt64(0),
+            stmt->columnText(1),
+            stmt->columnText(2),
+            stmt->columnInt64(3),
+            stmt->columnInt64(4),
+            static_cast<int>(stmt->columnInt64(5)),
+            stmt->columnInt64(6) == 1
+        });
+    }
+
+    return tasks;
 }
 
 // ── Generic execution ──────────────────────────────────────────────────────

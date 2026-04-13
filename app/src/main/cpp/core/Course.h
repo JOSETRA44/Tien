@@ -34,4 +34,15 @@ struct Note {
     int64_t     timestamp;
 };
 
+// A scheduled productivity task.
+struct Task {
+    int64_t     id;
+    std::string title;
+    std::string details;
+    int64_t     due_at;      // Unix epoch seconds
+    int64_t     created_at;  // Unix epoch seconds
+    int         priority;    // 0=Low, 1=Medium, 2=High
+    bool        is_done;
+};
+
 } // namespace tien::core

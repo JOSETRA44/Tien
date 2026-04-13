@@ -65,6 +65,25 @@ namespace {
         return ss.str();
     }
 
+    inline std::string tasksToJson(const std::vector<tien::core::Task>& tasks) {
+        std::ostringstream ss;
+        ss << '[';
+        for (size_t i = 0; i < tasks.size(); ++i) {
+            const auto& t = tasks[i];
+            if (i > 0) ss << ',';
+            ss << "{\"id\":" << t.id
+                << ",\"title\":\"" << jsonEscape(t.title) << '\"'
+                << ",\"details\":\"" << jsonEscape(t.details) << '\"'
+                << ",\"dueAt\":" << t.due_at
+                << ",\"createdAt\":" << t.created_at
+                << ",\"priority\":" << t.priority
+                << ",\"isDone\":" << (t.is_done ? "true" : "false")
+                << '}';
+        }
+        ss << ']';
+        return ss.str();
+    }
+
 } // anonymous namespace
 
 // ── JNI: Java_com_tien_core_NativeLib_<method> ──────────────────────────────
@@ -150,6 +169,69 @@ extern "C" {
 
         auto notes = db->getAllNotes();
         std::string json = notesToJson(notes);
+        return env->NewStringUTF(json.c_str());
+    }
+
+    JNIEXPORT jboolean JNICALL
+        Java_com_tien_core_NativeLib_insertTask(
+            JNIEnv* env, jobject /* thiz */,
+            jstring jPath, jstring jTitle, jstring jDetails, jlong jDueAt, jint jPriority) {
+
+        const std::string path = jstrToStd(env, jPath);
+        const std::string title = jstrToStd(env, jTitle);
+        const std::string details = jstrToStd(env, jDetails);
+        if (path.empty() || title.empty() || jDueAt <= 0) {
+            return JNI_FALSE;
+        }
+
+        auto db = tien::db::DatabaseManager::open(path);
+        if (!db) return JNI_FALSE;
+
+        int priority = static_cast<int>(jPriority);
+        if (priority < 0) priority = 0;
+        if (priority > 2) priority = 2;
+        return db->insertTask(title, details, static_cast<int64_t>(jDueAt), priority) ? JNI_TRUE : JNI_FALSE;
+    }
+
+    JNIEXPORT jboolean JNICALL
+        Java_com_tien_core_NativeLib_toggleTaskDone(
+            JNIEnv* env, jobject /* thiz */,
+            jstring jPath, jlong jId, jboolean jDone) {
+
+        const std::string path = jstrToStd(env, jPath);
+        if (path.empty() || jId <= 0) return JNI_FALSE;
+
+        auto db = tien::db::DatabaseManager::open(path);
+        if (!db) return JNI_FALSE;
+
+        return db->toggleTaskDone(static_cast<int64_t>(jId), jDone == JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
+    }
+
+    JNIEXPORT jboolean JNICALL
+        Java_com_tien_core_NativeLib_deleteTask(
+            JNIEnv* env, jobject /* thiz */, jstring jPath, jlong jId) {
+
+        const std::string path = jstrToStd(env, jPath);
+        if (path.empty() || jId <= 0) return JNI_FALSE;
+
+        auto db = tien::db::DatabaseManager::open(path);
+        if (!db) return JNI_FALSE;
+
+        return db->deleteTask(static_cast<int64_t>(jId)) ? JNI_TRUE : JNI_FALSE;
+    }
+
+    JNIEXPORT jstring JNICALL
+        Java_com_tien_core_NativeLib_getTasks(
+            JNIEnv* env, jobject /* thiz */, jstring jPath) {
+
+        const std::string path = jstrToStd(env, jPath);
+        if (path.empty()) return env->NewStringUTF("[]");
+
+        auto db = tien::db::DatabaseManager::open(path);
+        if (!db) return env->NewStringUTF("[]");
+
+        auto tasks = db->getAllTasks();
+        std::string json = tasksToJson(tasks);
         return env->NewStringUTF(json.c_str());
     }
 

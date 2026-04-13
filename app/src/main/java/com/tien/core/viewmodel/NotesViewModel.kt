@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.tien.core.NativeLib
 import com.tien.core.model.Note
+import com.tien.core.model.TaskItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,8 +18,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-// ── UI State ──────────────────────────────────────────────────────────────────
-
 enum class NotesSort {
     NEWEST,
     OLDEST,
@@ -27,48 +26,43 @@ enum class NotesSort {
 
 data class NotesUiState(
     val notes: List<Note> = emptyList(),
+    val tasks: List<TaskItem> = emptyList(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
     val searchQuery: String = "",
     val sort: NotesSort = NotesSort.NEWEST,
     val selectedDayKey: String? = null
 ) {
-    /** Notes filtered by search + date and sorted using the selected mode. */
-    val filtered: List<Note>
+    val filteredNotes: List<Note>
         get() {
             val searched = if (searchQuery.isBlank()) notes else notes.filter {
                 it.title.contains(searchQuery, ignoreCase = true) ||
                     it.content.contains(searchQuery, ignoreCase = true)
             }
-
-            val byDay = if (selectedDayKey == null) searched else searched.filter {
-                toDayKey(it.timestamp) == selectedDayKey
-            }
-
             return when (sort) {
-                NotesSort.NEWEST -> byDay.sortedByDescending { it.timestamp }
-                NotesSort.OLDEST -> byDay.sortedBy { it.timestamp }
-                NotesSort.TITLE -> byDay.sortedBy { it.title.lowercase(Locale.getDefault()) }
+                NotesSort.NEWEST -> searched.sortedByDescending { it.timestamp }
+                NotesSort.OLDEST -> searched.sortedBy { it.timestamp }
+                NotesSort.TITLE -> searched.sortedBy { it.title.lowercase(Locale.getDefault()) }
             }
         }
 
-    val availableDayKeys: List<String>
+    val agendaTasks: List<TaskItem>
         get() {
-            val searched = if (searchQuery.isBlank()) notes else notes.filter {
+            val searched = if (searchQuery.isBlank()) tasks else tasks.filter {
                 it.title.contains(searchQuery, ignoreCase = true) ||
-                    it.content.contains(searchQuery, ignoreCase = true)
+                    it.details.contains(searchQuery, ignoreCase = true)
             }
-            return searched
-                .map { toDayKey(it.timestamp) }
-                .distinct()
-                .sortedDescending()
+            val byDay = selectedDayKey?.let { key ->
+                searched.filter { toDayKey(it.dueAt) == key }
+            } ?: searched
+            return byDay.sortedBy { it.dueAt }
         }
 
-    val groupedByDay: List<Pair<String, List<Note>>>
-        get() = filtered
-            .groupBy { toDayKey(it.timestamp) }
-            .toList()
-            .sortedByDescending { it.first }
+    val taskDays: List<String>
+        get() = tasks
+            .map { toDayKey(it.dueAt) }
+            .distinct()
+            .sorted()
 }
 
 fun formatDayLabel(dayKey: String): String {
@@ -83,15 +77,17 @@ fun formatDayLabel(dayKey: String): String {
     }
 }
 
+fun formatDateTime(epochSeconds: Long): String {
+    val formatter = SimpleDateFormat("d MMM yyyy, HH:mm", Locale.getDefault())
+    return formatter.format(Date(epochSeconds * 1_000L))
+}
+
 private fun toDayKey(epochSeconds: Long): String {
     val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     return formatter.format(Date(epochSeconds * 1_000L))
 }
 
-// ── ViewModel ─────────────────────────────────────────────────────────────────
-
 class NotesViewModel(app: Application) : AndroidViewModel(app) {
-
     private val dbPath: String = app.getDatabasePath("tien_notes.db").absolutePath
 
     private val _uiState = MutableStateFlow(NotesUiState())
@@ -104,11 +100,9 @@ class NotesViewModel(app: Application) : AndroidViewModel(app) {
                 _uiState.update { it.copy(isLoading = false, errorMessage = "No se pudo abrir la base de datos.") }
                 return@launch
             }
-            loadNotes()
+            loadAll()
         }
     }
-
-    // ── Public API ────────────────────────────────────────────────────────────
 
     fun insertNote(title: String, content: String) {
         val trimmedTitle = title.trim()
@@ -119,11 +113,7 @@ class NotesViewModel(app: Application) : AndroidViewModel(app) {
 
         viewModelScope.launch(Dispatchers.IO) {
             val ok = NativeLib.insertNote(dbPath, trimmedTitle, content.trim())
-            if (ok) {
-                loadNotes()
-            } else {
-                _uiState.update { it.copy(errorMessage = "Error al guardar la nota.") }
-            }
+            if (ok) loadAll() else _uiState.update { it.copy(errorMessage = "Error al guardar la nota.") }
         }
     }
 
@@ -136,31 +126,50 @@ class NotesViewModel(app: Application) : AndroidViewModel(app) {
 
         viewModelScope.launch(Dispatchers.IO) {
             val ok = NativeLib.updateNote(dbPath, id, trimmedTitle, content.trim())
-            if (ok) {
-                loadNotes()
-            } else {
-                _uiState.update { it.copy(errorMessage = "No se pudo actualizar la nota.") }
-            }
+            if (ok) loadAll() else _uiState.update { it.copy(errorMessage = "No se pudo actualizar la nota.") }
         }
     }
 
     fun deleteNote(id: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             val ok = NativeLib.deleteNote(dbPath, id)
-            if (ok) {
-                loadNotes()
-            } else {
-                _uiState.update { it.copy(errorMessage = "No se pudo eliminar la nota.") }
-            }
+            if (ok) loadAll() else _uiState.update { it.copy(errorMessage = "No se pudo eliminar la nota.") }
+        }
+    }
+
+    fun insertTask(title: String, details: String, dueAt: Long, priority: Int) {
+        val trimmedTitle = title.trim()
+        if (trimmedTitle.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "El título de la tarea no puede estar vacío.") }
+            return
+        }
+        if (dueAt <= 0) {
+            _uiState.update { it.copy(errorMessage = "Fecha de vencimiento inválida.") }
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val ok = NativeLib.insertTask(dbPath, trimmedTitle, details.trim(), dueAt, priority.coerceIn(0, 2))
+            if (ok) loadAll() else _uiState.update { it.copy(errorMessage = "No se pudo guardar la tarea.") }
+        }
+    }
+
+    fun toggleTaskDone(id: Long, done: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val ok = NativeLib.toggleTaskDone(dbPath, id, done)
+            if (ok) loadAll() else _uiState.update { it.copy(errorMessage = "No se pudo actualizar la tarea.") }
+        }
+    }
+
+    fun deleteTask(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val ok = NativeLib.deleteTask(dbPath, id)
+            if (ok) loadAll() else _uiState.update { it.copy(errorMessage = "No se pudo eliminar la tarea.") }
         }
     }
 
     fun setSearchQuery(query: String) {
-        _uiState.update { current ->
-            val available = availableDaysFor(current.notes, query)
-            val selected = current.selectedDayKey?.takeIf { it in available }
-            current.copy(searchQuery = query, selectedDayKey = selected)
-        }
+        _uiState.update { it.copy(searchQuery = query) }
     }
 
     fun setSort(sort: NotesSort) {
@@ -175,36 +184,17 @@ class NotesViewModel(app: Application) : AndroidViewModel(app) {
         _uiState.update { it.copy(errorMessage = null) }
     }
 
-    // ── Internal ──────────────────────────────────────────────────────────────
-
-    private suspend fun loadNotes() {
-        val json = withContext(Dispatchers.IO) { NativeLib.getNotes(dbPath) }
-        val notes = parseNotes(json)
+    private suspend fun loadAll() {
+        val notesJson = withContext(Dispatchers.IO) { NativeLib.getNotes(dbPath) }
+        val tasksJson = withContext(Dispatchers.IO) { NativeLib.getTasks(dbPath) }
+        val notes = parseNotes(notesJson)
+        val tasks = parseTasks(tasksJson)
         _uiState.update { current ->
-            val available = availableDaysFor(notes, current.searchQuery)
-            val selected = current.selectedDayKey?.takeIf { it in available }
-            current.copy(notes = notes, isLoading = false, selectedDayKey = selected)
+            val selected = current.selectedDayKey?.takeIf { it in tasks.map { task -> toDayKey(task.dueAt) } }
+            current.copy(notes = notes, tasks = tasks, isLoading = false, selectedDayKey = selected)
         }
     }
 
-    private fun availableDaysFor(notes: List<Note>, query: String): List<String> {
-        val searched = if (query.isBlank()) notes else notes.filter {
-            it.title.contains(query, ignoreCase = true) ||
-                it.content.contains(query, ignoreCase = true)
-        }
-        return searched
-            .map { toDayKey(it.timestamp) }
-            .distinct()
-            .sortedDescending()
-    }
-
-    /**
-     * Parses the JSON array returned by [NativeLib.getNotes] into a list of [Note].
-     * Uses the built-in [org.json.JSONArray] — zero extra dependencies.
-     *
-     * Expected shape: [{"id":1,"title":"…","content":"…","timestamp":1234567890}, …]
-     * Returns an empty list on any parse error (logged to avoid crashing the UI).
-     */
     private fun parseNotes(json: String): List<Note> {
         if (json.isBlank()) return emptyList()
         return try {
@@ -212,14 +202,36 @@ class NotesViewModel(app: Application) : AndroidViewModel(app) {
             List(array.length()) { i ->
                 val obj = array.getJSONObject(i)
                 Note(
-                    id        = obj.getLong("id"),
-                    title     = obj.getString("title"),
-                    content   = obj.getString("content"),
+                    id = obj.getLong("id"),
+                    title = obj.getString("title"),
+                    content = obj.getString("content"),
                     timestamp = obj.getLong("timestamp")
                 )
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             _uiState.update { it.copy(errorMessage = "Error al leer las notas.") }
+            emptyList()
+        }
+    }
+
+    private fun parseTasks(json: String): List<TaskItem> {
+        if (json.isBlank()) return emptyList()
+        return try {
+            val array = JSONArray(json)
+            List(array.length()) { i ->
+                val obj = array.getJSONObject(i)
+                TaskItem(
+                    id = obj.getLong("id"),
+                    title = obj.getString("title"),
+                    details = obj.optString("details", ""),
+                    dueAt = obj.getLong("dueAt"),
+                    createdAt = obj.optLong("createdAt", 0L),
+                    priority = obj.optInt("priority", 1),
+                    isDone = obj.optBoolean("isDone", false)
+                )
+            }
+        } catch (_: Exception) {
+            _uiState.update { it.copy(errorMessage = "Error al leer las tareas.") }
             emptyList()
         }
     }
