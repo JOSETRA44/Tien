@@ -92,6 +92,25 @@
     body {
       min-height: max(884px, 100dvh);
     }
+    .reveal {
+        opacity: 0;
+        transform: translateY(40px);
+        transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal-left {
+        opacity: 0;
+        transform: translateX(-40px);
+        transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal-right {
+        opacity: 0;
+        transform: translateX(40px);
+        transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal.active, .reveal-left.active, .reveal-right.active {
+        opacity: 1;
+        transform: translate(0, 0);
+    }
   </style>
   </head>
 <body class="bg-surface text-on-surface selection:bg-primary selection:text-on-primary">
@@ -121,7 +140,7 @@
 </div>
 <div class="relative z-10 max-w-7xl mx-auto w-full">
 <div class="flex flex-col md:flex-row items-end md:items-start justify-between gap-12">
-<div class="w-full md:w-3/4">
+<div class="w-full md:w-3/4 reveal">
 <h1 class="text-header text-6xl md:text-9xl font-bold leading-none tracking-tighter mb-8">
                             TIEN PRODUCTIVITY
                         </h1>
@@ -132,11 +151,11 @@
 <div class="hidden md:block w-px h-64 bg-outline-variant opacity-30"></div>
 </div>
 <div class="mt-24 grid grid-cols-1 md:grid-cols-12 gap-12 items-end">
-<div class="md:col-span-4 aspect-square bg-surface-container-low border border-outline-variant/10 group overflow-hidden">
-<img class="w-full h-full object-cover grayscale opacity-50 group-hover:scale-105 transition-transform duration-[400ms]" data-alt="Technical schematic close-up of high-end circuitry and computer hardware with blue ambient lighting and sharp metallic edges" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCwApfqnhKXRc2qDV1CC00ygrzi1b0xnmQJFe-W0SfIKpdFFzkEZhX5yli-t2PO3rbgW2jwVyRBn0DTO_uvMjQaHmL-W0UT57QT_i-ZvUZVUUp-0I8UGsgxsoHpKV6jnyEwi8UK3Un2_ysJApMhT-Jlvjn4rvXi6zTnLVcM34E2nM_w9ysKxcdJ-IrdcktzMCKQrxrCcHovC8ekIMoF0AZw6utk6MS9VWNrnsMz-7ywdwDDjicPRGXxkEFLQSakfitAH_Q5OUNnIUA"/>
+<div class="md:col-span-4 aspect-square bg-surface-container-low border border-outline-variant/10 group overflow-hidden reveal">
+<img class="w-full h-full object-cover grayscale opacity-50 group-hover:scale-105 transition-transform duration-[400ms] img-parallax" data-alt="Technical schematic close-up of high-end circuitry and computer hardware with blue ambient lighting and sharp metallic edges" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCwApfqnhKXRc2qDV1CC00ygrzi1b0xnmQJFe-W0SfIKpdFFzkEZhX5yli-t2PO3rbgW2jwVyRBn0DTO_uvMjQaHmL-W0UT57QT_i-ZvUZVUUp-0I8UGsgxsoHpKV6jnyEwi8UK3Un2_ysJApMhT-Jlvjn4rvXi6zTnLVcM34E2nM_w9ysKxcdJ-IrdcktzMCKQrxrCcHovC8ekIMoF0AZw6utk6MS9VWNrnsMz-7ywdwDDjicPRGXxkEFLQSakfitAH_Q5OUNnIUA"/>
 </div>
 <div class="md:col-span-8">
-<div class="flex flex-col gap-6 max-w-2xl">
+<div class="flex flex-col gap-6 max-w-2xl reveal-right" style="transition-delay: 200ms;">
 <span class="text-[10px] tracking-[0.5em] text-primary-container uppercase font-bold">SYSTEM_MANIFESTO_01</span>
 <p class="text-lg md:text-2xl font-light leading-relaxed text-on-surface-variant">
                                 We reject the softness of modern interfaces. Tien Productivity is built on a foundation of structural integrity, providing the high-end instrument required for high-frequency workflows.
@@ -155,7 +174,7 @@
 <div class="max-w-7xl mx-auto">
 <div class="grid grid-cols-1 md:grid-cols-2 gap-24">
 <!-- Feature: Notes -->
-<div class="flex flex-col gap-8">
+<div class="flex flex-col gap-8 reveal-left">
 <div class="flex justify-between items-baseline border-b border-outline-variant/20 pb-4">
 <h2 class="text-header text-4xl font-bold tracking-tight">NOTES</h2>
 <span class="text-[10px] font-mono opacity-50">MODULE_01</span>
@@ -169,7 +188,7 @@
                         </p>
 </div>
 <!-- Feature: Agenda -->
-<div class="flex flex-col gap-8">
+<div class="flex flex-col gap-8 reveal-right" style="transition-delay: 200ms;">
 <div class="flex justify-between items-baseline border-b border-outline-variant/20 pb-4">
 <h2 class="text-header text-4xl font-bold tracking-tight">AGENDA</h2>
 <span class="text-[10px] font-mono opacity-50">MODULE_02</span>
@@ -194,7 +213,7 @@
 </div>
 <div class="relative grid grid-cols-1 md:grid-cols-4 gap-4">
 <!-- Layer 1: UI -->
-<div class="p-8 border border-outline-variant/30 bg-surface-container flex flex-col justify-between aspect-square">
+<div class="p-8 border border-outline-variant/30 bg-surface-container flex flex-col justify-between aspect-square reveal" style="transition-delay: 100ms;">
 <span class="text-[10px] font-mono text-secondary">LAYER_00</span>
 <div class="flex flex-col gap-2">
 <h3 class="text-header text-2xl font-bold">VIEWMODEL</h3>
@@ -202,7 +221,7 @@
 </div>
 </div>
 <!-- Layer 2: Logic -->
-<div class="p-8 border border-outline-variant/30 bg-surface-container-high flex flex-col justify-between aspect-square md:translate-y-8">
+<div class="p-8 border border-outline-variant/30 bg-surface-container-high flex flex-col justify-between aspect-square md:translate-y-8 reveal" style="transition-delay: 200ms;">
 <span class="text-[10px] font-mono text-secondary">LAYER_01</span>
 <div class="flex flex-col gap-2">
 <h3 class="text-header text-2xl font-bold">STATEFLOW</h3>
@@ -210,7 +229,7 @@
 </div>
 </div>
 <!-- Layer 3: Bridge -->
-<div class="p-8 border border-outline-variant/30 bg-surface-container-highest flex flex-col justify-between aspect-square md:translate-y-16">
+<div class="p-8 border border-outline-variant/30 bg-surface-container-highest flex flex-col justify-between aspect-square md:translate-y-16 reveal" style="transition-delay: 300ms;">
 <span class="text-[10px] font-mono text-secondary">LAYER_02</span>
 <div class="flex flex-col gap-2">
 <h3 class="text-header text-2xl font-bold">JNI</h3>
@@ -218,7 +237,7 @@
 </div>
 </div>
 <!-- Layer 4: Storage -->
-<div class="p-8 border-2 border-primary bg-primary flex flex-col justify-between aspect-square md:translate-y-24">
+<div class="p-8 border-2 border-primary bg-primary flex flex-col justify-between aspect-square md:translate-y-24 reveal" style="transition-delay: 400ms;">
 <span class="text-[10px] font-mono text-on-primary">LAYER_03</span>
 <div class="flex flex-col gap-2">
 <h3 class="text-header text-2xl font-bold text-on-primary">C++ SQLITE</h3>
@@ -227,7 +246,7 @@
 </div>
 </div>
 <div class="mt-48 grid grid-cols-1 md:grid-cols-2 gap-12 border-t border-outline-variant/20 pt-12">
-<div>
+<div class="reveal-left">
 <h4 class="text-header text-xl font-bold mb-4">PERFORMANCE_BENCHMARK</h4>
 <div class="w-full h-px bg-outline-variant mb-4"></div>
 <div class="flex justify-between items-end">
@@ -238,7 +257,7 @@
 <div class="bg-primary h-full w-[98%]"></div>
 </div>
 </div>
-<div>
+<div class="reveal-right">
 <h4 class="text-header text-xl font-bold mb-4">MEMORY_FOOTPRINT</h4>
 <div class="w-full h-px bg-outline-variant mb-4"></div>
 <div class="flex justify-between items-end">
@@ -255,27 +274,27 @@
 <!-- Tech Stack Grid -->
 <section class="py-32 px-6 md:px-12 bg-surface-container-lowest" id="tech">
 <div class="max-w-7xl mx-auto">
-<div class="flex flex-col md:flex-row justify-between items-end gap-8 mb-24">
+<div class="flex flex-col md:flex-row justify-between items-end gap-8 mb-24 reveal">
 <h2 class="text-header text-5xl font-bold tracking-tighter w-full md:w-1/2">TECHNICAL SPECIFICATIONS</h2>
 <p class="text-[12px] uppercase tracking-[0.2em] text-outline text-right font-medium">System Integrity Verified</p>
 </div>
 <div class="grid grid-cols-2 md:grid-cols-4 gap-px bg-outline-variant/20 border border-outline-variant/20">
-<div class="bg-surface p-12 flex flex-col gap-4">
+<div class="bg-surface p-12 flex flex-col gap-4 reveal" style="transition-delay: 100ms;">
 <span class="material-symbols-outlined text-4xl opacity-50">terminal</span>
 <h5 class="text-header font-bold text-lg">KOTLIN</h5>
 <p class="text-[10px] text-outline uppercase tracking-widest font-medium">Native Android Logic</p>
 </div>
-<div class="bg-surface p-12 flex flex-col gap-4">
+<div class="bg-surface p-12 flex flex-col gap-4 reveal" style="transition-delay: 200ms;">
 <span class="material-symbols-outlined text-4xl opacity-50">memory</span>
 <h5 class="text-header font-bold text-lg">COROUTINES</h5>
 <p class="text-[10px] text-outline uppercase tracking-widest font-medium">Asynchronous Engine</p>
 </div>
-<div class="bg-surface p-12 flex flex-col gap-4">
+<div class="bg-surface p-12 flex flex-col gap-4 reveal" style="transition-delay: 300ms;">
 <span class="material-symbols-outlined text-4xl opacity-50">database</span>
 <h5 class="text-header font-bold text-lg">SQLITE</h5>
 <p class="text-[10px] text-outline uppercase tracking-widest font-medium">Local Data Vault</p>
 </div>
-<div class="bg-surface p-12 flex flex-col gap-4">
+<div class="bg-surface p-12 flex flex-col gap-4 reveal" style="transition-delay: 400ms;">
 <span class="material-symbols-outlined text-4xl opacity-50">settings_ethernet</span>
 <h5 class="text-header font-bold text-lg">JNI_C++</h5>
 <p class="text-[10px] text-outline uppercase tracking-widest font-medium">Native Performance</p>
@@ -307,4 +326,27 @@
 </div>
 </div>
 </footer>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.15, rootMargin: "0px 0px -50px 0px" });
+
+        document.querySelectorAll('.reveal, .reveal-left, .reveal-right').forEach(el => observer.observe(el));
+
+        document.addEventListener('mousemove', (e) => {
+            const parallaxEls = document.querySelectorAll('.img-parallax');
+            const x = (window.innerWidth - e.pageX * 2) / 80;
+            const y = (window.innerHeight - e.pageY * 2) / 80;
+            parallaxEls.forEach(el => {
+                el.style.transform = `translateX(${x}px) translateY(${y}px) scale(1.05)`;
+            });
+        });
+    });
+</script>
 </body></html>
