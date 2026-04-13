@@ -1,117 +1,310 @@
 <!DOCTYPE html>
-<html lang="es" data-theme="light">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tien Productivity</title>
-    <meta name="description" content="Aplicación Android de productividad con enfoque arquitectónico orientado a escalabilidad.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <nav class="navbar">
-        <div class="logo">Tien.</div>
-        <button id="theme-toggle" class="theme-toggle" aria-label="Cambiar tema">
-            <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-            <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-        </button>
-    </nav>
 
-    <header class="hero glass-box fade-in">
-        <div class="hero-content">
-            <div class="pill">Android Productivity App</div>
-            <h1 class="title">Productividad Escalable y Nativa</h1>
-            <p class="subtitle">Descubre <strong>Tien</strong>, la aplicación centralizada para Notas y Agenda, construida con Jetpack Compose, Material 3 y SQLite nativo en C++.</p>
-        </div>
-    </header>
-
-    <main class="container">
-        
-        <section class="section fade-in">
-            <div class="section-header">
-                <h2>Capacidades Clave</h2>
-                <p>Una única experiencia, diseñada para eficiencia y control constante de tus tareas y notas.</p>
-            </div>
-            <div class="grid features">
-                <article class="card">
-                    <div class="icon">📝</div>
-                    <h3>Notas</h3>
-                    <p>Captura rápida de información, edición fluida, organización mediante búsqueda y orden por recientes, antiguas o alfabético. Posibilidad de recuperar notas eliminadas.</p>
-                </article>
-                <article class="card">
-                    <div class="icon">📅</div>
-                    <h3>Agenda</h3>
-                    <p>Gestión de tareas con fecha de vencimiento, prioridad (baja, media, alta) y control de vida de la tarea. Filtrado por día dentro de la aplicación.</p>
-                </article>
-                <article class="card">
-                    <div class="icon">🎨</div>
-                    <h3>UX / UI</h3>
-                    <p>Implementación fiel de Material 3 con tema global claro/oscuro que cambia en tiempo real. Navegación fluida y retroalimentación proactiva al usuario.</p>
-                </article>
-            </div>
-        </section>
-
-        <section class="section fade-in">
-            <div class="section-header">
-                <h2>Arquitectura & Capa de Datos</h2>
-                <p>Separación de responsabilidades clara entre la UI, estado y persistencia mediante contratos de JNI estables.</p>
-            </div>
-            
-            <div class="architecture-layout">
-                <div class="arch-col">
-                    <div class="card code-card">
-                        <h3>Flujo Unidireccional</h3>
-                        <p>UI → ViewModel → NativeLib → DB → ViewModel → UI</p>
-                        <ul class="principles-list">
-                            <li><strong>Single source of truth</strong> en <code class="inline-code">NotesUiState</code>.</li>
-                            <li>Lógica de negocio encapsulada y orquestada por el ViewModel.</li>
-                            <li>Operaciones transaccionales y rápidas usando C++/SQLite, vinculadas vía JNI.</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="arch-col arch-diagram">
-                    <div class="flow-item layer-ui">Compose UI</div>
-                    <div class="flow-arrow">↓</div>
-                    <div class="flow-item layer-state">ViewModel / StateFlow</div>
-                    <div class="flow-arrow">↓</div>
-                    <div class="flow-item layer-bridge">JNI Bridge (NativeLib)</div>
-                    <div class="flow-arrow">↓</div>
-                    <div class="flow-item layer-db">SQLite Local (C++)</div>
-                </div>
-            </div>
-        </section>
-
-        <section class="section fade-in">
-            <div class="section-header">
-                <h2>Stack Tecnológico</h2>
-                <p>Herramientas modernas combinando el potencial del desarrollo moderno con la velocidad del código nativo.</p>
-            </div>
-            <div class="stack-grid">
-                <div class="stack-item"><span>UI</span><strong>Jetpack Compose, Material 3</strong></div>
-                <div class="stack-item"><span>Estado</span><strong>ViewModel + StateFlow</strong></div>
-                <div class="stack-item"><span>Persistencia</span><strong>SQLite local (amalgamación)</strong></div>
-                <div class="stack-item"><span>Core Datos</span><strong>C++17 (NDK)</strong></div>
-                <div class="stack-item"><span>Bridge</span><strong>JNI</strong></div>
-                <div class="stack-item"><span>Build Android</span><strong>AGP 8.13.2, Kotlin 2.0.21</strong></div>
-                <div class="stack-item"><span>Build Nativo</span><strong>CMake 3.22</strong></div>
-            </div>
-        </section>
-
-    </main>
-
-    <footer>
-        <div class="footer-content">
-            <p><strong>Tien Productivity</strong> &copy; 2026. Proyecto enfocado en arquitectura escalable.</p>
-            <div class="footer-links">
-                <a href="#">Privacidad</a>
-                <a href="#">Términos</a>
-                <a href="#">Licencia</a>
-            </div>
-        </div>
-    </footer>
-
-    <script src="script.js"></script>
-</body>
-</html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TIEN PRODUCTIVITY | ARCHITECTURAL PRECISION</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@200;300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface": "#131313",
+                      "on-secondary-container": "#e3e2e2",
+                      "inverse-primary": "#5d5f5f",
+                      "on-secondary": "#1b1c1c",
+                      "on-error-container": "#ffdad6",
+                      "on-surface": "#e2e2e2",
+                      "secondary-container": "#464747",
+                      "outline-variant": "#474747",
+                      "tertiary-fixed-dim": "#474747",
+                      "primary-container": "#d4d4d4",
+                      "primary": "#ffffff",
+                      "surface-dim": "#131313",
+                      "on-tertiary": "#1b1c1c",
+                      "secondary-fixed-dim": "#ababab",
+                      "inverse-surface": "#e2e2e2",
+                      "secondary": "#c7c6c6",
+                      "on-tertiary-fixed-variant": "#e4e2e1",
+                      "surface-container-highest": "#353535",
+                      "on-tertiary-fixed": "#ffffff",
+                      "on-secondary-fixed-variant": "#3b3b3c",
+                      "background": "#131313",
+                      "primary-fixed": "#5d5f5f",
+                      "error-container": "#93000a",
+                      "error": "#ffb4ab",
+                      "on-primary-fixed": "#ffffff",
+                      "tertiary": "#e4e2e1",
+                      "surface-container-high": "#2a2a2a",
+                      "on-tertiary-container": "#000000",
+                      "on-primary-container": "#000000",
+                      "outline": "#919191",
+                      "on-error": "#690005",
+                      "surface-variant": "#353535",
+                      "surface-container": "#1f1f1f",
+                      "surface-container-lowest": "#0e0e0e",
+                      "secondary-fixed": "#c7c6c6",
+                      "tertiary-container": "#929090",
+                      "on-secondary-fixed": "#1b1c1c",
+                      "surface-container-low": "#1b1b1b",
+                      "inverse-on-surface": "#303030",
+                      "surface-bright": "#393939",
+                      "on-background": "#e2e2e2",
+                      "surface-tint": "#c6c6c7",
+                      "on-primary": "#1a1c1c",
+                      "on-surface-variant": "#c6c6c6",
+                      "primary-fixed-dim": "#454747",
+                      "on-primary-fixed-variant": "#e2e2e2",
+                      "tertiary-fixed": "#5f5e5e"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0px",
+                      "lg": "0px",
+                      "xl": "0px",
+                      "full": "0px"
+              },
+              "fontFamily": {
+                      "headline": ["Space Grotesk"],
+                      "body": ["Inter"],
+                      "label": ["Space Grotesk"]
+              }
+            },
+          },
+        }
+      </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #131313;
+            color: #e2e2e2;
+            font-family: 'Inter', sans-serif;
+        }
+        .text-header { font-family: 'Space Grotesk', sans-serif; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface selection:bg-primary selection:text-on-primary">
+<!-- TopAppBar -->
+<nav class="fixed top-0 w-full z-50 border-none bg-[#131313] text-white font-['Space_Grotesk'] font-bold uppercase tracking-widest">
+<div class="flex justify-between items-center w-full px-6 md:px-12 py-6 max-w-none">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-2xl">architecture</span>
+<span class="text-2xl font-bold tracking-tighter text-white">TIEN_PRODUCTIVITY</span>
+</div>
+<div class="hidden md:flex items-center gap-8 text-[11px] font-medium tracking-[0.2em]">
+<a class="text-[#D4D4D4] hover:text-white transition-colors duration-200" href="#features">FEATURES</a>
+<a class="text-[#D4D4D4] hover:text-white transition-colors duration-200" href="#architecture">CORE_ENGINE</a>
+<a class="text-[#D4D4D4] hover:text-white transition-colors duration-200" href="#tech">SPECIFICATIONS</a>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2 text-[10px] tracking-widest font-bold hover:bg-primary-container transition-all duration-150">
+                ACCESS_SYSTEM
+            </button>
+</div>
+<div class="bg-[#1B1B1B] h-[1px] w-full absolute bottom-0"></div>
+</nav>
+<main class="pt-24">
+<!-- Hero Section -->
+<section class="min-h-screen flex flex-col justify-center px-6 md:px-12 py-20 relative overflow-hidden">
+<div class="absolute top-0 right-0 w-full h-full opacity-5 pointer-events-none">
+<div class="absolute inset-0" style="background-image: radial-gradient(circle at 2px 2px, #ffffff 1px, transparent 0); background-size: 40px 40px;"></div>
+</div>
+<div class="relative z-10 max-w-7xl mx-auto w-full">
+<div class="flex flex-col md:flex-row items-end md:items-start justify-between gap-12">
+<div class="w-full md:w-3/4">
+<h1 class="text-header text-6xl md:text-9xl font-bold leading-none tracking-tighter mb-8">
+                            TIEN PRODUCTIVITY
+                        </h1>
+<p class="text-header text-xl md:text-3xl font-light tracking-[0.2em] text-secondary">
+                            ARCHITECTURAL PRECISION IN PRODUCTIVITY
+                        </p>
+</div>
+<div class="hidden md:block w-px h-64 bg-outline-variant opacity-30"></div>
+</div>
+<div class="mt-24 grid grid-cols-1 md:grid-cols-12 gap-12 items-end">
+<div class="md:col-span-4 aspect-square bg-surface-container-low border border-outline-variant/10 group overflow-hidden">
+<img class="w-full h-full object-cover grayscale opacity-50 group-hover:scale-105 transition-transform duration-[400ms]" data-alt="Technical schematic close-up of high-end circuitry and computer hardware with blue ambient lighting and sharp metallic edges" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCwApfqnhKXRc2qDV1CC00ygrzi1b0xnmQJFe-W0SfIKpdFFzkEZhX5yli-t2PO3rbgW2jwVyRBn0DTO_uvMjQaHmL-W0UT57QT_i-ZvUZVUUp-0I8UGsgxsoHpKV6jnyEwi8UK3Un2_ysJApMhT-Jlvjn4rvXi6zTnLVcM34E2nM_w9ysKxcdJ-IrdcktzMCKQrxrCcHovC8ekIMoF0AZw6utk6MS9VWNrnsMz-7ywdwDDjicPRGXxkEFLQSakfitAH_Q5OUNnIUA"/>
+</div>
+<div class="md:col-span-8">
+<div class="flex flex-col gap-6 max-w-2xl">
+<span class="text-[10px] tracking-[0.5em] text-primary-container uppercase font-bold">SYSTEM_MANIFESTO_01</span>
+<p class="text-lg md:text-2xl font-light leading-relaxed text-on-surface-variant">
+                                We reject the softness of modern interfaces. Tien Productivity is built on a foundation of structural integrity, providing the high-end instrument required for high-frequency workflows.
+                            </p>
+<div class="flex gap-4 mt-4">
+<div class="w-12 h-[2px] bg-primary my-auto"></div>
+<span class="text-[10px] tracking-widest font-bold">v4.0.2_ARCHIVE</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Features Section -->
+<section class="bg-surface-container-low py-32 px-6 md:px-12" id="features">
+<div class="max-w-7xl mx-auto">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-24">
+<!-- Feature: Notes -->
+<div class="flex flex-col gap-8">
+<div class="flex justify-between items-baseline border-b border-outline-variant/20 pb-4">
+<h2 class="text-header text-4xl font-bold tracking-tight">NOTES</h2>
+<span class="text-[10px] font-mono opacity-50">MODULE_01</span>
+</div>
+<div class="aspect-video bg-surface-container-high border border-outline-variant/10 relative overflow-hidden group">
+<img class="w-full h-full object-cover grayscale opacity-40 group-hover:opacity-60 transition-opacity duration-300" data-alt="A minimalist architectural workspace with a sleek laptop and technical drawings under soft, cool studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDIMJrozYBDc9FeqziElAUnXCcb-CfvJ2BbSoY0eZafQGdQmmY6bZeE2BeozmS-j53qr32FsLsB8aBk6LjkmYHn7pdEXOiZ0YR5pxoLPQmb4IDc8iXh9TguygzjIqRRZRErUR8KH1Q__wNpJKkorO3qcbTTWEnA6bdm6iM2VP1bAI4KosFiDpY5zj-HA8-Gftn6HDiAj8ZNDEq271VULfDaWrNXhgOeXZ77EOnlbmcgp7Hjh4qUmNyt07iXbKCZ3v86Yiulnjo0XzU"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface to-transparent opacity-60"></div>
+</div>
+<p class="text-on-surface-variant leading-relaxed font-light">
+                            High-fidelity Markdown engine integrated with a native C++ backend. Zero-latency indexing for immediate retrieval of complex technical data and architectural schemas.
+                        </p>
+</div>
+<!-- Feature: Agenda -->
+<div class="flex flex-col gap-8">
+<div class="flex justify-between items-baseline border-b border-outline-variant/20 pb-4">
+<h2 class="text-header text-4xl font-bold tracking-tight">AGENDA</h2>
+<span class="text-[10px] font-mono opacity-50">MODULE_02</span>
+</div>
+<div class="aspect-video bg-surface-container-high border border-outline-variant/10 relative overflow-hidden group">
+<img class="w-full h-full object-cover grayscale opacity-40 group-hover:opacity-60 transition-opacity duration-300" data-alt="Monochromatic aerial view of a brutalist concrete building with sharp shadows and geometric precision" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAXMq8aIOqql674nzvVA4bAfBWOdabhvUbcm8weq8TQM0xYCjtYMcd_5TBnvs4LbeS9KUtyG1_XUoRP989W4wppA970U4ghoDCUR5RQcnj-O1cadsMMRNNwyhSVw6YQid01TuEcl2CPHZ_E4gT0xnyrmQ7Fp1tR_ywIfkr5-hilg8zvkJtG9JUYmX4sa4TJPcbhyUnDWFYsx24aMeFLhx9v-USJxcuhZ5EWOSjzGW2ggIXVldOn1FTSMqvhPUGAEDF1eEV68q7fO1Y"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface to-transparent opacity-60"></div>
+</div>
+<p class="text-on-surface-variant leading-relaxed font-light">
+                            A time-management layer designed for industrial precision. Multi-threaded synchronization ensures your schedule remains immutable across local and cloud environments.
+                        </p>
+</div>
+</div>
+</div>
+</section>
+<!-- Architecture Diagram Section -->
+<section class="py-32 px-6 md:px-12 bg-surface" id="architecture">
+<div class="max-w-7xl mx-auto">
+<div class="mb-24">
+<span class="text-[10px] tracking-[0.4em] font-bold text-outline uppercase block mb-4">ENGINEERING_HIERARCHY</span>
+<h2 class="text-header text-5xl md:text-7xl font-bold tracking-tighter">CORE ENGINE</h2>
+</div>
+<div class="relative grid grid-cols-1 md:grid-cols-4 gap-4">
+<!-- Layer 1: UI -->
+<div class="p-8 border border-outline-variant/30 bg-surface-container flex flex-col justify-between aspect-square">
+<span class="text-[10px] font-mono text-secondary">LAYER_00</span>
+<div class="flex flex-col gap-2">
+<h3 class="text-header text-2xl font-bold">VIEWMODEL</h3>
+<p class="text-[11px] uppercase tracking-widest text-outline">Jetpack Compose UI</p>
+</div>
+</div>
+<!-- Layer 2: Logic -->
+<div class="p-8 border border-outline-variant/30 bg-surface-container-high flex flex-col justify-between aspect-square md:translate-y-8">
+<span class="text-[10px] font-mono text-secondary">LAYER_01</span>
+<div class="flex flex-col gap-2">
+<h3 class="text-header text-2xl font-bold">STATEFLOW</h3>
+<p class="text-[11px] uppercase tracking-widest text-outline">Reactive Streams</p>
+</div>
+</div>
+<!-- Layer 3: Bridge -->
+<div class="p-8 border border-outline-variant/30 bg-surface-container-highest flex flex-col justify-between aspect-square md:translate-y-16">
+<span class="text-[10px] font-mono text-secondary">LAYER_02</span>
+<div class="flex flex-col gap-2">
+<h3 class="text-header text-2xl font-bold">JNI</h3>
+<p class="text-[11px] uppercase tracking-widest text-outline">Native Interface</p>
+</div>
+</div>
+<!-- Layer 4: Storage -->
+<div class="p-8 border-2 border-primary bg-primary flex flex-col justify-between aspect-square md:translate-y-24">
+<span class="text-[10px] font-mono text-on-primary">LAYER_03</span>
+<div class="flex flex-col gap-2">
+<h3 class="text-header text-2xl font-bold text-on-primary">C++ SQLITE</h3>
+<p class="text-[11px] uppercase tracking-widest text-on-primary opacity-70">Low-Level Persistence</p>
+</div>
+</div>
+</div>
+<div class="mt-48 grid grid-cols-1 md:grid-cols-2 gap-12 border-t border-outline-variant/20 pt-12">
+<div>
+<h4 class="text-header text-xl font-bold mb-4">PERFORMANCE_BENCHMARK</h4>
+<div class="w-full h-px bg-outline-variant mb-4"></div>
+<div class="flex justify-between items-end">
+<span class="text-4xl font-bold tracking-tighter">0.02ms</span>
+<span class="text-[10px] tracking-widest uppercase text-outline">Average Query Latency</span>
+</div>
+<div class="mt-4 w-full h-[2px] bg-surface-container-highest">
+<div class="bg-primary h-full w-[98%]"></div>
+</div>
+</div>
+<div>
+<h4 class="text-header text-xl font-bold mb-4">MEMORY_FOOTPRINT</h4>
+<div class="w-full h-px bg-outline-variant mb-4"></div>
+<div class="flex justify-between items-end">
+<span class="text-4xl font-bold tracking-tighter">14.2MB</span>
+<span class="text-[10px] tracking-widest uppercase text-outline">Peak Runtime Allocation</span>
+</div>
+<div class="mt-4 w-full h-[2px] bg-surface-container-highest">
+<div class="bg-primary h-full w-[15%]"></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Tech Stack Grid -->
+<section class="py-32 px-6 md:px-12 bg-surface-container-lowest" id="tech">
+<div class="max-w-7xl mx-auto">
+<div class="flex flex-col md:flex-row justify-between items-end gap-8 mb-24">
+<h2 class="text-header text-5xl font-bold tracking-tighter w-full md:w-1/2">TECHNICAL SPECIFICATIONS</h2>
+<p class="text-[12px] uppercase tracking-[0.2em] text-outline text-right font-medium">System Integrity Verified</p>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-px bg-outline-variant/20 border border-outline-variant/20">
+<div class="bg-surface p-12 flex flex-col gap-4">
+<span class="material-symbols-outlined text-4xl opacity-50">terminal</span>
+<h5 class="text-header font-bold text-lg">KOTLIN</h5>
+<p class="text-[10px] text-outline uppercase tracking-widest font-medium">Native Android Logic</p>
+</div>
+<div class="bg-surface p-12 flex flex-col gap-4">
+<span class="material-symbols-outlined text-4xl opacity-50">memory</span>
+<h5 class="text-header font-bold text-lg">COROUTINES</h5>
+<p class="text-[10px] text-outline uppercase tracking-widest font-medium">Asynchronous Engine</p>
+</div>
+<div class="bg-surface p-12 flex flex-col gap-4">
+<span class="material-symbols-outlined text-4xl opacity-50">database</span>
+<h5 class="text-header font-bold text-lg">SQLITE</h5>
+<p class="text-[10px] text-outline uppercase tracking-widest font-medium">Local Data Vault</p>
+</div>
+<div class="bg-surface p-12 flex flex-col gap-4">
+<span class="material-symbols-outlined text-4xl opacity-50">settings_ethernet</span>
+<h5 class="text-header font-bold text-lg">JNI_C++</h5>
+<p class="text-[10px] text-outline uppercase tracking-widest font-medium">Native Performance</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Final CTA -->
+<section class="py-48 px-6 md:px-12 flex flex-col items-center text-center">
+<h2 class="text-header text-4xl md:text-6xl font-bold tracking-tighter mb-12">RECLAIM YOUR COGNITIVE LOAD</h2>
+<button class="bg-primary text-on-primary px-12 py-5 text-sm tracking-[0.3em] font-bold hover:scale-105 transition-all duration-150">
+                DOWNLOAD_CORE_SYSTEM
+            </button>
+<p class="mt-8 text-[10px] tracking-[0.5em] text-outline uppercase">Optimized for Android 14 and higher</p>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full border-t border-[#1B1B1B] bg-[#131313] text-white font-['Inter'] text-[10px] uppercase tracking-[0.2em] font-light">
+<div class="flex flex-col md:flex-row justify-between items-center w-full px-6 md:px-12 py-16 gap-8">
+<div class="flex flex-col gap-2">
+<span class="text-white font-bold text-sm tracking-widest">TIEN PRODUCTIVITY</span>
+<p class="text-[#D4D4D4]">© 2024 TIEN PRODUCTIVITY. ARCHITECTURAL INTEGRITY GUARANTEED.</p>
+</div>
+<div class="flex flex-wrap justify-center gap-8">
+<a class="text-[#D4D4D4] hover:text-white transition-opacity duration-150" href="#">DOCUMENTATION</a>
+<a class="text-[#D4D4D4] hover:text-white transition-opacity duration-150" href="#">CORE_ENGINE</a>
+<a class="text-[#D4D4D4] hover:text-white transition-opacity duration-150" href="#">ARCHITECTURE</a>
+<a class="text-[#D4D4D4] hover:text-white transition-opacity duration-150" href="#">PRIVACY_PROTOCOL</a>
+</div>
+</div>
+</footer>
+</body></html>
