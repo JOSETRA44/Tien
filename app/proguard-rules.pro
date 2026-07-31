@@ -1,21 +1,46 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
+# ═══════════════════════════════════════════════════════════════════════════
+#  Tien — R8 / ProGuard rules
 #
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+#  R8 is enabled for release builds. Without the rules below the release APK
+#  would build cleanly and then crash at runtime, which is the worst kind of
+#  failure: it never shows up in a debug build.
+# ═══════════════════════════════════════════════════════════════════════════
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# ── JNI boundary — load-bearing ────────────────────────────────────────────
+# libtien_core.so resolves its entry points by the mangled symbol name
+# `Java_com_tien_core_data_nativedb_NativeDatabase_<method>`. R8 renames classes
+# and methods by default, so obfuscating this one would break every lookup with
+# an UnsatisfiedLinkError the moment the database is first touched.
+-keep class com.tien.core.data.nativedb.NativeDatabase {
+    native <methods>;
+    *;
+}
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Belt and braces for any future native class: keep every method a .so binds to.
+-keepclasseswithmembernames,includedescriptorclasses class * {
+    native <methods>;
+}
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# ── Domain models crossing the JSON boundary ───────────────────────────────
+# Field names are read reflectively-by-string from the native payload
+# ("createdAt", "isDone", …) in NativePayloadMapper. Renaming the Kotlin
+# properties is safe — the mapper uses string literals — but keeping the model
+# classes makes stack traces readable and guards against a future switch to a
+# reflective serializer.
+-keep class com.tien.core.domain.model.** { *; }
+
+# ── Kotlin / coroutines ────────────────────────────────────────────────────
+-keepclassmembers class kotlinx.coroutines.** { volatile <fields>; }
+-dontwarn kotlinx.coroutines.**
+
+# DataStore relies on these being present.
+-keep class androidx.datastore.*.** { *; }
+
+# ── Diagnostics ────────────────────────────────────────────────────────────
+# Keep line numbers so a release crash report points at a real line, while
+# still hiding the original source file names.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+
+# Keep the annotations Compose and the Kotlin runtime read at runtime.
+-keepattributes *Annotation*, InnerClasses, Signature, Exceptions

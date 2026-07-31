@@ -1,0 +1,52 @@
+package com.tien.core.ui.navigation
+
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Today
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Today
+import androidx.compose.ui.graphics.vector.ImageVector
+
+/**
+ * Top-level destinations.
+ *
+ * A sealed hierarchy rather than the previous `selectedTab: Int`: an `Int` gave
+ * no compile-time guarantee that a screen existed for it, and `if (tab == 0)`
+ * checks were spread across the UI with no single place to see the structure.
+ *
+ * `route` is the Navigation identifier; the icon pair follows the Material
+ * convention of filled-when-selected, outlined otherwise.
+ */
+sealed class TienDestination(
+    val route: String,
+    val label: String,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector,
+    /** Label for the FAB while this destination is showing. */
+    val createLabel: String
+) {
+    data object Notes : TienDestination(
+        route = "notes",
+        label = "Notas",
+        selectedIcon = Icons.Filled.Description,
+        unselectedIcon = Icons.Outlined.Description,
+        createLabel = "Nueva nota"
+    )
+
+    data object Agenda : TienDestination(
+        route = "agenda",
+        label = "Agenda",
+        selectedIcon = Icons.Filled.Today,
+        unselectedIcon = Icons.Outlined.Today,
+        createLabel = "Nueva tarea"
+    )
+
+    companion object {
+        val bottomBarItems = listOf(Notes, Agenda)
+
+        val startRoute: String = Notes.route
+
+        fun fromRoute(route: String?): TienDestination =
+            bottomBarItems.firstOrNull { it.route == route } ?: Notes
+    }
+}

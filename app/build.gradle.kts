@@ -26,8 +26,25 @@ android {
     }
 
     buildTypes {
-        release {
+        debug {
+            // Lets a debug build sit side-by-side with a release install.
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
             isMinifyEnabled = false
+
+            ndk {
+                // Debug builds only need the two architectures anyone actually
+                // debugs on: modern hardware and the x86_64 emulator. The
+                // 9.5 MB SQLite amalgamation was being compiled four times per
+                // build, for armeabi-v7a and x86 nobody was running.
+                abiFilters += listOf("arm64-v8a", "x86_64")
+            }
+        }
+        release {
+            // R8 was off, so release shipped every unused class with full symbol
+            // names. Both flags on: smaller APK, obfuscated code.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -36,12 +53,18 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        // AGP 8.13 + compileSdk 36 expect a 17 toolchain; 11 left newer API
+        // surface and desugaring on the table.
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+
+        // minSdk is 24, but the date/time layer uses java.time (API 26+), so
+        // the desugar library backfills it.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 
     externalNativeBuild {
@@ -52,7 +75,20 @@ android {
     }
 
     buildFeatures {
-        compose = true                           // Enable Jetpack Compose
+        compose = true
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+        }
     }
 }
 
@@ -60,6 +96,8 @@ dependencies {
     // ── Core ──────────────────────────────────────────────────────────────────
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
+    implementation(libs.kotlinx.coroutines.android)
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     // ── Jetpack Compose (BOM manages all Compose versions) ───────────────────
     val composeBom = platform(libs.androidx.compose.bom)
@@ -76,12 +114,22 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.navigation.compose)
+
+    // ── Preferences ───────────────────────────────────────────────────────────
+    implementation(libs.androidx.datastore.preferences)
 
     // ── Debug tooling ─────────────────────────────────────────────────────────
     debugImplementation(libs.androidx.compose.ui.tooling)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     // ── Tests ─────────────────────────────────────────────────────────────────
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
+
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
 }

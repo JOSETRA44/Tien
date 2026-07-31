@@ -36,11 +36,18 @@ target_compile_definitions(sqlite3 PRIVATE
     SQLITE_DEFAULT_SYNCHRONOUS=1      # NORMAL — balanced speed / durability
     SQLITE_DEFAULT_MEMSTATUS=0        # Skip memory-use statistics (mobile perf)
     SQLITE_DEFAULT_WAL_AUTOCHECKPOINT=1000
+    SQLITE_DQS=0                      # Reject double-quoted string literals:
+                                      # "typo" silently becoming a string is a
+                                      # classic source of wrong query results.
+    SQLITE_LIKE_DOESNT_MATCH_BLOBS    # Faster LIKE, matches our text-only usage
+    SQLITE_MAX_EXPR_DEPTH=0           # Skip the expression-depth counter
 )
+
+# The amalgamation is third-party: silence its warnings so ours stay visible.
+target_compile_options(sqlite3 PRIVATE -w)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  TARGET 2 — tien_core (shared .so loaded by Android)
-#  Sources: db/DatabaseManager.cpp · jni/native-lib.cpp
 # ═══════════════════════════════════════════════════════════════════════════════
 add_library(tien_core SHARED
     db/DatabaseManager.cpp
@@ -49,7 +56,7 @@ add_library(tien_core SHARED
 
 # Expose cpp/ as root so any translation unit can write:
 #   #include "db/DatabaseManager.h"
-#   #include "core/Course.h"
+#   #include "core/Models.h"
 #   #include "utils/Logger.h"
 target_include_directories(tien_core PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -58,24 +65,35 @@ target_include_directories(tien_core PRIVATE
 target_link_libraries(tien_core
     PRIVATE
         sqlite3        # Merged into the .so at link time (no extra .a shipped)
-        log            # Android liblog → __android_log_print
+        log            # Android liblog → __android_log_vprint
 )
 
-# ── Release hardening ──────────────────────────────────────────────────────────
+# ── Diagnostics ────────────────────────────────────────────────────────────────
 target_compile_options(tien_core PRIVATE
     -Wall
     -Wextra
     -Wpedantic
     -Werror=return-type
-    -fvisibility=hidden   # Only explicit JNI symbols are exported
+    -Werror=format          # A printf/format mismatch in the Logger is a crash,
+                            # not a style issue — fail the build on it.
+    -fvisibility=hidden     # Only explicit JNI symbols are exported
     -fstack-protector-strong
 )
 
+# ── Release-only hardening ─────────────────────────────────────────────────────
+# Stripping in Debug would erase the symbols ndk-stack and the debugger need to
+# symbolicate a native crash — exactly when they matter most.
 target_link_options(tien_core PRIVATE
-    -Wl,--gc-sections     # Discard unreferenced sections
-    -Wl,--strip-all       # Remove all symbol table entries from the .so
+    -Wl,--gc-sections                                   # Discard unreferenced sections
+    $<$<CONFIG:Release>:-Wl,--strip-all>                # Drop the symbol table
+    $<$<CONFIG:Release>:-Wl,-z,relro,-z,now>            # Full RELRO
 )
 
-# JNI functions declared extern "C" in native-lib.cpp bypass -fvisibility=hidden
-# automatically; no JNIEXPORT/__attribute__((visibility("default"))) dance needed
-# as long as you keep the standard Java_com_tien_core_* naming convention.
+target_compile_options(tien_core PRIVATE
+    $<$<CONFIG:Release>:-ffunction-sections>
+    $<$<CONFIG:Release>:-fdata-sections>
+)
+
+# JNI functions declared extern "C" in native-lib.cpp carry JNIEXPORT, which
+# expands to __attribute__((visibility("default"))) — so they survive
+# -fvisibility=hidden while everything else stays internal to the .so.
