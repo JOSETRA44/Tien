@@ -17,15 +17,17 @@ namespace tien::db {
 // affected-row count). Kotlin maps these onto its own sealed error type, so a
 // failure is never mistaken for "no results" — the bug this replaces.
 enum class DbStatus : int64_t {
-    Ok            =  0,
-    ErrorGeneric  = -1,
+    Ok = 0,
+    ErrorGeneric = -1,
     ErrorNotFound = -2,
     ErrorConflict = -3,
-    ErrorClosed   = -4,
-    ErrorInvalid  = -5
+    ErrorClosed = -4,
+    ErrorInvalid = -5
 };
 
-constexpr int64_t asCode(DbStatus s) noexcept { return static_cast<int64_t>(s); }
+constexpr int64_t asCode(DbStatus s) noexcept {
+    return static_cast<int64_t>(s);
+}
 
 // ── RAII Prepared-Statement Wrapper ────────────────────────────────────────
 // Guarantees sqlite3_finalize on every exit path. Move-only; the factory
@@ -36,7 +38,7 @@ public:
 
     Stmt(Stmt&&) noexcept;
     Stmt& operator=(Stmt&&) noexcept;
-    Stmt(const Stmt&)            = delete;
+    Stmt(const Stmt&) = delete;
     Stmt& operator=(const Stmt&) = delete;
 
     ~Stmt();  // sqlite3_finalize
@@ -54,9 +56,9 @@ public:
 
     // ── Column access (valid only after step() returned SQLITE_ROW) ────────
     int64_t     columnInt64(int col) const;
-    int         columnInt(int col)   const;
-    std::string columnText(int col)  const;
-    bool        columnBool(int col)  const;
+    int         columnInt(int col) const;
+    std::string columnText(int col) const;
+    bool        columnBool(int col) const;
 
     sqlite3_stmt* raw() const noexcept { return stmt_; }
 
@@ -73,7 +75,7 @@ public:
     explicit Transaction(sqlite3* db);
     ~Transaction();
 
-    Transaction(const Transaction&)            = delete;
+    Transaction(const Transaction&) = delete;
     Transaction& operator=(const Transaction&) = delete;
 
     bool begin();
@@ -105,10 +107,10 @@ public:
     // Returns nullptr on failure (logged internally).
     static std::unique_ptr<DatabaseManager> open(const std::string& db_path);
 
-    DatabaseManager(const DatabaseManager&)            = delete;
+    DatabaseManager(const DatabaseManager&) = delete;
     DatabaseManager& operator=(const DatabaseManager&) = delete;
-    DatabaseManager(DatabaseManager&&)                 = delete;
-    DatabaseManager& operator=(DatabaseManager&&)      = delete;
+    DatabaseManager(DatabaseManager&&) = delete;
+    DatabaseManager& operator=(DatabaseManager&&) = delete;
 
     ~DatabaseManager();
 
@@ -131,8 +133,8 @@ public:
     std::optional<core::Note> findNote(int64_t id);
 
     // ── Tasks ──────────────────────────────────────────────────────────────
-    int64_t insertTask(const std::string& title, const std::string& details,
-                       int64_t dueAt, int priority);
+    int64_t insertTask(const std::string& title, const std::string& details, int64_t dueAt,
+                       int priority);
     int64_t updateTask(int64_t id, const std::string& title, const std::string& details,
                        int64_t dueAt, int priority);
     int64_t setTaskDone(int64_t id, bool done);
@@ -140,17 +142,15 @@ public:
     int64_t restoreTask(const core::Task& task);
 
     // `dayStart`/`dayEnd` bound due_at to a single day when both are > 0.
-    std::vector<core::Task> queryTasks(const std::string& query,
-                                       core::TaskFilter filter,
-                                       int64_t dayStart,
-                                       int64_t dayEnd);
+    std::vector<core::Task> queryTasks(const std::string& query, core::TaskFilter filter,
+                                       int64_t dayStart, int64_t dayEnd);
 
     std::optional<core::Task> findTask(int64_t id);
 
     // ── Diagnostics ────────────────────────────────────────────────────────
     const std::string& path() const noexcept { return db_path_; }
-    bool isOpen() const noexcept { return db_ != nullptr; }
-    std::string lastError() const;
+    bool               isOpen() const noexcept { return db_ != nullptr; }
+    std::string        lastError() const;
 
 private:
     explicit DatabaseManager(sqlite3* db, std::string path);
@@ -176,4 +176,4 @@ private:
     mutable std::mutex mutex_;
 };
 
-} // namespace tien::db
+}  // namespace tien::db

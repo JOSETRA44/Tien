@@ -51,7 +51,8 @@ fun NoteEditorSheet(
     initialContent: String,
     isEditing: Boolean,
     onDismiss: () -> Unit,
-    onSave: (title: String, content: String) -> Unit
+    onSave: (title: String, content: String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var title by rememberSaveable(initialTitle) { mutableStateOf(initialTitle) }
     var content by rememberSaveable(initialContent) { mutableStateOf(initialContent) }
@@ -70,7 +71,8 @@ fun NoteEditorSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
+        modifier = modifier
     ) {
         Column(
             modifier = Modifier

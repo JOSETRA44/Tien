@@ -111,4 +111,5 @@ internal val DarkExtendedColors = TienExtendedColors(
  * changes when the whole theme changes, so there is no benefit to tracking
  * reads — and a real cost to doing so on every card.
  */
+@Suppress("ComposeCompositionLocalUsage")
 val LocalTienExtendedColors = staticCompositionLocalOf { LightExtendedColors }

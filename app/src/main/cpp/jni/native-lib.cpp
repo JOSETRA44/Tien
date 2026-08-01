@@ -70,9 +70,7 @@ jbyteArray stdToBytes(JNIEnv* env, const std::string& value) {
         return nullptr;
     }
     if (len > 0) {
-        env->SetByteArrayRegion(
-            array, 0, len,
-            reinterpret_cast<const jbyte*>(value.data()));
+        env->SetByteArrayRegion(array, 0, len, reinterpret_cast<const jbyte*>(value.data()));
     }
     return array;
 }
@@ -84,13 +82,13 @@ std::string jsonEscape(const std::string& s) {
     out.reserve(s.size() + 8);
     for (const char c : s) {
         switch (c) {
-            case '"':  out += "\\\""; break;
+            case '"': out += "\\\""; break;
             case '\\': out += "\\\\"; break;
-            case '\n': out += "\\n";  break;
-            case '\r': out += "\\r";  break;
-            case '\t': out += "\\t";  break;
-            case '\b': out += "\\b";  break;
-            case '\f': out += "\\f";  break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            case '\b': out += "\\b"; break;
+            case '\f': out += "\\f"; break;
             default: {
                 const auto byte = static_cast<unsigned char>(c);
                 if (byte < 0x20) {
@@ -112,25 +110,17 @@ std::string jsonEscape(const std::string& s) {
 }
 
 void appendNote(std::ostringstream& ss, const tien::core::Note& n) {
-    ss << "{\"id\":" << n.id
-       << ",\"title\":\"" << jsonEscape(n.title) << '"'
-       << ",\"content\":\"" << jsonEscape(n.content) << '"'
-       << ",\"createdAt\":" << n.created_at
-       << ",\"updatedAt\":" << n.updated_at
-       << ",\"pinned\":" << (n.pinned ? "true" : "false")
+    ss << "{\"id\":" << n.id << ",\"title\":\"" << jsonEscape(n.title) << '"' << ",\"content\":\""
+       << jsonEscape(n.content) << '"' << ",\"createdAt\":" << n.created_at
+       << ",\"updatedAt\":" << n.updated_at << ",\"pinned\":" << (n.pinned ? "true" : "false")
        << '}';
 }
 
 void appendTask(std::ostringstream& ss, const tien::core::Task& t) {
-    ss << "{\"id\":" << t.id
-       << ",\"title\":\"" << jsonEscape(t.title) << '"'
-       << ",\"details\":\"" << jsonEscape(t.details) << '"'
-       << ",\"dueAt\":" << t.due_at
-       << ",\"createdAt\":" << t.created_at
-       << ",\"updatedAt\":" << t.updated_at
-       << ",\"priority\":" << t.priority
-       << ",\"isDone\":" << (t.is_done ? "true" : "false")
-       << '}';
+    ss << "{\"id\":" << t.id << ",\"title\":\"" << jsonEscape(t.title) << '"' << ",\"details\":\""
+       << jsonEscape(t.details) << '"' << ",\"dueAt\":" << t.due_at
+       << ",\"createdAt\":" << t.created_at << ",\"updatedAt\":" << t.updated_at
+       << ",\"priority\":" << t.priority << ",\"isDone\":" << (t.is_done ? "true" : "false") << '}';
 }
 
 template <typename T, typename Appender>
@@ -162,7 +152,7 @@ std::string failureEnvelope(const std::string& message) {
     return ss.str();
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  JNI entry points — com.tien.core.data.nativedb.NativeDatabase
@@ -195,29 +185,28 @@ TIEN_JNI(void, nativeClose)(JNIEnv*, jobject, jlong handle) {
 }
 
 TIEN_JNI(jbyteArray, nativeLastError)(JNIEnv* env, jobject, jlong handle) {
-    auto* db = fromHandle(handle);
+    auto*             db = fromHandle(handle);
     const std::string msg = db ? db->lastError() : "invalid handle";
     return stdToBytes(env, msg);
 }
 
 // ── Notes ──────────────────────────────────────────────────────────────────
 
-TIEN_JNI(jlong, nativeInsertNote)(JNIEnv* env, jobject, jlong handle,
-                                  jbyteArray jTitle, jbyteArray jContent) {
+TIEN_JNI(jlong, nativeInsertNote)
+(JNIEnv* env, jobject, jlong handle, jbyteArray jTitle, jbyteArray jContent) {
     auto* db = fromHandle(handle);
     if (!db) return asCode(DbStatus::ErrorClosed);
     return db->insertNote(bytesToStd(env, jTitle), bytesToStd(env, jContent));
 }
 
-TIEN_JNI(jlong, nativeUpdateNote)(JNIEnv* env, jobject, jlong handle, jlong id,
-                                  jbyteArray jTitle, jbyteArray jContent) {
+TIEN_JNI(jlong, nativeUpdateNote)
+(JNIEnv* env, jobject, jlong handle, jlong id, jbyteArray jTitle, jbyteArray jContent) {
     auto* db = fromHandle(handle);
     if (!db) return asCode(DbStatus::ErrorClosed);
     return db->updateNote(id, bytesToStd(env, jTitle), bytesToStd(env, jContent));
 }
 
-TIEN_JNI(jlong, nativeSetNotePinned)(JNIEnv*, jobject, jlong handle,
-                                     jlong id, jboolean pinned) {
+TIEN_JNI(jlong, nativeSetNotePinned)(JNIEnv*, jobject, jlong handle, jlong id, jboolean pinned) {
     auto* db = fromHandle(handle);
     if (!db) return asCode(DbStatus::ErrorClosed);
     return db->setNotePinned(id, pinned == JNI_TRUE);
@@ -229,30 +218,25 @@ TIEN_JNI(jlong, nativeDeleteNote)(JNIEnv*, jobject, jlong handle, jlong id) {
     return db->deleteNote(id);
 }
 
-TIEN_JNI(jlong, nativeRestoreNote)(JNIEnv* env, jobject, jlong handle, jlong id,
-                                   jbyteArray jTitle, jbyteArray jContent,
-                                   jlong createdAt, jlong updatedAt, jboolean pinned) {
+TIEN_JNI(jlong, nativeRestoreNote)
+(JNIEnv* env, jobject, jlong handle, jlong id, jbyteArray jTitle, jbyteArray jContent,
+ jlong createdAt, jlong updatedAt, jboolean pinned) {
     auto* db = fromHandle(handle);
     if (!db) return asCode(DbStatus::ErrorClosed);
 
     const tien::core::Note note{
-        id,
-        bytesToStd(env, jTitle),
-        bytesToStd(env, jContent),
-        createdAt,
-        updatedAt,
-        pinned == JNI_TRUE
-    };
+        id,        bytesToStd(env, jTitle), bytesToStd(env, jContent), createdAt,
+        updatedAt, pinned == JNI_TRUE};
     return db->restoreNote(note);
 }
 
-TIEN_JNI(jbyteArray, nativeQueryNotes)(JNIEnv* env, jobject, jlong handle,
-                                       jbyteArray jQuery, jint sort) {
+TIEN_JNI(jbyteArray, nativeQueryNotes)
+(JNIEnv* env, jobject, jlong handle, jbyteArray jQuery, jint sort) {
     auto* db = fromHandle(handle);
     if (!db) return stdToBytes(env, failureEnvelope("database is closed"));
 
-    const auto notes = db->queryNotes(bytesToStd(env, jQuery),
-                                      static_cast<tien::core::NoteSort>(sort));
+    const auto notes =
+        db->queryNotes(bytesToStd(env, jQuery), static_cast<tien::core::NoteSort>(sort));
     return stdToBytes(env, successEnvelope(notes, appendNote));
 }
 
@@ -265,26 +249,25 @@ TIEN_JNI(jbyteArray, nativeFindNote)(JNIEnv* env, jobject, jlong handle, jlong i
 
 // ── Tasks ──────────────────────────────────────────────────────────────────
 
-TIEN_JNI(jlong, nativeInsertTask)(JNIEnv* env, jobject, jlong handle,
-                                  jbyteArray jTitle, jbyteArray jDetails,
-                                  jlong dueAt, jint priority) {
+TIEN_JNI(jlong, nativeInsertTask)
+(JNIEnv* env, jobject, jlong handle, jbyteArray jTitle, jbyteArray jDetails, jlong dueAt,
+ jint priority) {
     auto* db = fromHandle(handle);
     if (!db) return asCode(DbStatus::ErrorClosed);
-    return db->insertTask(bytesToStd(env, jTitle), bytesToStd(env, jDetails),
-                          dueAt, static_cast<int>(priority));
+    return db->insertTask(bytesToStd(env, jTitle), bytesToStd(env, jDetails), dueAt,
+                          static_cast<int>(priority));
 }
 
-TIEN_JNI(jlong, nativeUpdateTask)(JNIEnv* env, jobject, jlong handle, jlong id,
-                                  jbyteArray jTitle, jbyteArray jDetails,
-                                  jlong dueAt, jint priority) {
+TIEN_JNI(jlong, nativeUpdateTask)
+(JNIEnv* env, jobject, jlong handle, jlong id, jbyteArray jTitle, jbyteArray jDetails, jlong dueAt,
+ jint priority) {
     auto* db = fromHandle(handle);
     if (!db) return asCode(DbStatus::ErrorClosed);
-    return db->updateTask(id, bytesToStd(env, jTitle), bytesToStd(env, jDetails),
-                          dueAt, static_cast<int>(priority));
+    return db->updateTask(id, bytesToStd(env, jTitle), bytesToStd(env, jDetails), dueAt,
+                          static_cast<int>(priority));
 }
 
-TIEN_JNI(jlong, nativeSetTaskDone)(JNIEnv*, jobject, jlong handle,
-                                   jlong id, jboolean done) {
+TIEN_JNI(jlong, nativeSetTaskDone)(JNIEnv*, jobject, jlong handle, jlong id, jboolean done) {
     auto* db = fromHandle(handle);
     if (!db) return asCode(DbStatus::ErrorClosed);
     return db->setTaskDone(id, done == JNI_TRUE);
@@ -296,35 +279,25 @@ TIEN_JNI(jlong, nativeDeleteTask)(JNIEnv*, jobject, jlong handle, jlong id) {
     return db->deleteTask(id);
 }
 
-TIEN_JNI(jlong, nativeRestoreTask)(JNIEnv* env, jobject, jlong handle, jlong id,
-                                   jbyteArray jTitle, jbyteArray jDetails,
-                                   jlong dueAt, jlong createdAt, jlong updatedAt,
-                                   jint priority, jboolean isDone) {
+TIEN_JNI(jlong, nativeRestoreTask)
+(JNIEnv* env, jobject, jlong handle, jlong id, jbyteArray jTitle, jbyteArray jDetails, jlong dueAt,
+ jlong createdAt, jlong updatedAt, jint priority, jboolean isDone) {
     auto* db = fromHandle(handle);
     if (!db) return asCode(DbStatus::ErrorClosed);
 
     const tien::core::Task task{
-        id,
-        bytesToStd(env, jTitle),
-        bytesToStd(env, jDetails),
-        dueAt,
-        createdAt,
-        updatedAt,
-        static_cast<int>(priority),
-        isDone == JNI_TRUE
-    };
+        id,        bytesToStd(env, jTitle),    bytesToStd(env, jDetails), dueAt, createdAt,
+        updatedAt, static_cast<int>(priority), isDone == JNI_TRUE};
     return db->restoreTask(task);
 }
 
-TIEN_JNI(jbyteArray, nativeQueryTasks)(JNIEnv* env, jobject, jlong handle,
-                                       jbyteArray jQuery, jint filter,
-                                       jlong dayStart, jlong dayEnd) {
+TIEN_JNI(jbyteArray, nativeQueryTasks)
+(JNIEnv* env, jobject, jlong handle, jbyteArray jQuery, jint filter, jlong dayStart, jlong dayEnd) {
     auto* db = fromHandle(handle);
     if (!db) return stdToBytes(env, failureEnvelope("database is closed"));
 
-    const auto tasks = db->queryTasks(bytesToStd(env, jQuery),
-                                      static_cast<tien::core::TaskFilter>(filter),
-                                      dayStart, dayEnd);
+    const auto tasks = db->queryTasks(
+        bytesToStd(env, jQuery), static_cast<tien::core::TaskFilter>(filter), dayStart, dayEnd);
     return stdToBytes(env, successEnvelope(tasks, appendTask));
 }
 
@@ -337,4 +310,4 @@ TIEN_JNI(jbyteArray, nativeFindTask)(JNIEnv* env, jobject, jlong handle, jlong i
 
 #undef TIEN_JNI
 
-} // extern "C"
+}  // extern "C"

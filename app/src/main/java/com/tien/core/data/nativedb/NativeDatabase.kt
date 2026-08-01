@@ -95,6 +95,15 @@ internal object NativeDatabase {
 
     external fun nativeDeleteTask(handle: Long, id: Long): Long
 
+    /**
+     * Restores a deleted task with its original identity intact.
+     *
+     * The parameter list mirrors every persisted column because that is what
+     * "restore exactly what was there" means. Wrapping them in a data class
+     * would not help: JNI cannot read Kotlin objects without reflection from
+     * C++, which is both slower and far more fragile than passing primitives.
+     */
+    @Suppress("LongParameterList")
     external fun nativeRestoreTask(
         handle: Long,
         id: Long,

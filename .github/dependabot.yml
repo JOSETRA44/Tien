@@ -1,0 +1,48 @@
+version: 2
+
+# Dependency freshness is handled here rather than by Android Lint's
+# GradleDependency / NewerVersionAvailable checks. A lint warning that every
+# build repeats and nobody can action is noise; a pull request with a changelog
+# and a green CI run is a decision someone can actually make.
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    commit-message:
+      prefix: 'deps'
+    groups:
+      # AndroidX moves in lockstep and the Compose BOM pins the Compose
+      # artifacts together. Separate PRs per artifact would conflict with each
+      # other and each need its own CI run.
+      androidx:
+        patterns:
+          - 'androidx.*'
+      kotlin:
+        patterns:
+          - 'org.jetbrains.kotlin*'
+          - 'org.jetbrains.kotlinx*'
+      tooling:
+        patterns:
+          - 'io.gitlab.arturbosch.detekt*'
+          - 'com.slack.lint.compose*'
+          - 'com.squareup.leakcanary*'
+    ignore:
+      # AGP and the Kotlin Gradle plugin have to move together with the Compose
+      # compiler and the detekt build. Bumping either on its own reliably breaks
+      # the build, so those upgrades stay deliberate.
+      - dependency-name: 'com.android.tools.build:gradle'
+      - dependency-name: 'org.jetbrains.kotlin:kotlin-gradle-plugin'
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    labels:
+      - ci
+    commit-message:
+      prefix: 'ci'

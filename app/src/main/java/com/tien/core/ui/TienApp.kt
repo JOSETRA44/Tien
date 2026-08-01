@@ -14,7 +14,6 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -29,7 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -146,6 +144,14 @@ fun TienApp(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            // ComposeViewModelInjection warns about calling viewModel() inside a
+            // composable, and it is right almost everywhere — a screen deep in
+            // the tree should receive its dependencies. A NavHost destination is
+            // the exception: it *is* the composition root for that screen, the
+            // place where the ViewModel's scope is defined. There is nowhere
+            // higher to hoist to, and both screens already take their ViewModel
+            // as a parameter, so they stay previewable and testable.
+            @Suppress("ComposeViewModelInjection")
             NavHost(
                 navController = navController,
                 startDestination = TienDestination.startRoute

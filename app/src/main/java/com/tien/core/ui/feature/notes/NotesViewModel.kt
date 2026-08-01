@@ -12,7 +12,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
@@ -126,7 +125,7 @@ class NotesViewModel(
     fun onCreateNote(title: String, content: String) {
         viewModelScope.launch {
             when (val result = noteRepository.create(title, content)) {
-                is AppResult.Success -> Unit  // the stream refreshes the list
+                is AppResult.Success -> Unit // the stream refreshes the list
                 is AppResult.Failure -> emitMessage(result.error.toMessage())
             }
         }

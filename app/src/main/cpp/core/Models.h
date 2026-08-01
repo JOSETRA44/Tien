@@ -15,9 +15,9 @@ namespace tien::core {
 
 // Priority ladder for a task. Persisted as INTEGER.
 enum class Priority : int {
-    Low    = 0,
+    Low = 0,
     Medium = 1,
-    High   = 2
+    High = 2
 };
 
 constexpr int kPriorityMin = static_cast<int>(Priority::Low);
@@ -32,11 +32,11 @@ constexpr int clampPriority(int raw) noexcept {
 
 // ── Note ────────────────────────────────────────────────────────────────────
 struct Note {
-    int64_t     id;         // SQLite ROWID alias
+    int64_t     id;  // SQLite ROWID alias
     std::string title;
     std::string content;
-    int64_t     created_at; // Unix epoch seconds
-    int64_t     updated_at; // Unix epoch seconds
+    int64_t     created_at;  // Unix epoch seconds
+    int64_t     updated_at;  // Unix epoch seconds
     bool        pinned;
 };
 
@@ -45,10 +45,10 @@ struct Task {
     int64_t     id;
     std::string title;
     std::string details;
-    int64_t     due_at;     // Unix epoch seconds
-    int64_t     created_at; // Unix epoch seconds
-    int64_t     updated_at; // Unix epoch seconds
-    int         priority;   // Priority enum value
+    int64_t     due_at;      // Unix epoch seconds
+    int64_t     created_at;  // Unix epoch seconds
+    int64_t     updated_at;  // Unix epoch seconds
+    int         priority;    // Priority enum value
     bool        is_done;
 };
 
@@ -59,15 +59,15 @@ struct Task {
 // over the whole table in memory.
 enum class NoteSort : int {
     RecentlyUpdated = 0,
-    OldestFirst     = 1,
-    TitleAsc        = 2
+    OldestFirst = 1,
+    TitleAsc = 2
 };
 
 // Completion filter applied to the tasks query.
 enum class TaskFilter : int {
-    All       = 0,
-    Pending   = 1,
+    All = 0,
+    Pending = 1,
     Completed = 2
 };
 
-} // namespace tien::core
+}  // namespace tien::core

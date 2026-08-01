@@ -1,9 +1,12 @@
 <resources>
-    <!-- Base window theme. Compose handles all visual theming;
-         this XML only sets the pre-render window background and hides the action bar. -->
+    <!-- Base window theme. Compose handles all visual theming; this XML only
+         sets the pre-render window background and hides the action bar.
+         `window_background` is defined per night-mode, so the launch frame
+         matches the Compose surface instead of flashing white in dark mode. -->
     <style name="Theme.Tien" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:windowBackground">@color/window_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>

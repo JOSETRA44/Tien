@@ -14,6 +14,13 @@ datastore = "1.1.1"
 coroutines = "1.9.0"
 turbine = "1.2.0"
 desugarJdkLibs = "2.1.3"
+# 1.23.8 is the last 1.x line, built against Kotlin 2.0.21 — the exact compiler
+# this project uses. The 2.0 alphas target Kotlin 2.4 and would mismatch.
+detekt = "1.23.8"
+# 1.4.x builds against lint 31.x (AGP 8.x). 1.5.x moved to lint 32 / AGP 9 and
+# would be skipped at runtime by this AGP.
+composeLintChecks = "1.4.2"
+leakcanary = "2.14"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -53,7 +60,21 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "j
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
 
+# ── Análisis estático y diagnóstico ──────────────────────────────────────────
+# Wraps ktlint as a detekt ruleset, so formatting and static analysis run from
+# one task instead of two competing plugins.
+detekt-formatting = { group = "io.gitlab.arturbosch.detekt", name = "detekt-formatting", version.ref = "detekt" }
+
+# Compose-specific lint rules: unstable parameters, missing modifiers, state
+# hoisting mistakes. Plain Android Lint knows nothing about these.
+compose-lint-checks = { group = "com.slack.lint.compose", name = "compose-lint-checks", version.ref = "composeLintChecks" }
+
+# Debug-only. Watches Activities, Fragments, ViewModels and services for
+# retained instances after they should have been collected.
+leakcanary-android = { group = "com.squareup.leakcanary", name = "leakcanary-android", version.ref = "leakcanary" }
+
 [plugins]
 android-application  = { id = "com.android.application", version.ref = "agp" }
 kotlin-android       = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 compose-compiler     = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+detekt               = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }

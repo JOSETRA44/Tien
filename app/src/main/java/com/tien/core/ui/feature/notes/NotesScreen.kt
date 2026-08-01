@@ -42,10 +42,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tien.core.core.time.DateTimeLabels
-import com.tien.core.domain.model.Note
 import com.tien.core.domain.model.NoteSort
 import com.tien.core.ui.designsystem.component.EmptyState
 import com.tien.core.ui.designsystem.component.ErrorState
@@ -114,7 +112,6 @@ fun NotesScreen(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-
         NotesToolbar(
             count = uiState.totalCount,
             searchVisible = searchVisible,

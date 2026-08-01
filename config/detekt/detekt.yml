@@ -1,0 +1,153 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  Tien — detekt configuration
+#
+#  Overrides only. `buildUponDefaultConfig = true` means every rule not named
+#  here keeps detekt's own default, so upgrading detekt brings new checks in
+#  rather than silently disabling them.
+#
+#  Most of what follows exists because detekt's defaults predate Compose, and
+#  idiomatic Compose trips several of them by design.
+# ═══════════════════════════════════════════════════════════════════════════
+
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+
+config:
+  validation: true
+  warningsAsErrors: false
+
+complexity:
+  LongParameterList:
+    # A composable takes its state plus one lambda per event it emits. Six is
+    # normal for a screen-level composable and says nothing about its quality.
+    functionThreshold: 8
+    constructorThreshold: 8
+    ignoreDefaultParameters: true
+    ignoreAnnotated: ['Composable']
+  LongMethod:
+    threshold: 120
+    # A screen composable is one declarative tree; splitting it purely to
+    # satisfy a line count produces worse code, not better.
+    ignoreAnnotated: ['Composable']
+  TooManyFunctions:
+    thresholdInFiles: 20
+    thresholdInClasses: 20
+    thresholdInObjects: 25
+    ignorePrivate: true
+    ignoreAnnotatedFunctions: ['Composable']
+  CyclomaticComplexMethod:
+    threshold: 18
+    ignoreSingleWhenExpression: true
+    # A screen composable's branches are its render states (loading, error,
+    # empty, empty-search, content). Splitting them out to lower a count would
+    # scatter one coherent decision across several functions.
+    ignoreAnnotated: ['Composable']
+  NestedBlockDepth:
+    # Compose trees nest structurally: Scaffold > Column > LazyColumn > item.
+    threshold: 6
+    ignoreAnnotated: ['Composable']
+
+naming:
+  FunctionNaming:
+    # Composables are PascalCase by convention — this is the single most
+    # important Compose override.
+    ignoreAnnotated: ['Composable']
+  TopLevelPropertyNaming:
+    constantPattern: '[A-Z][_A-Za-z0-9]*'
+  MatchingDeclarationName:
+    active: false  # Files here deliberately group related declarations.
+
+style:
+  MagicNumber:
+    # dp/sp literals are the *content* of a design system, not magic constants.
+    ignoreNumbers: ['-1', '0', '1', '2', '100', '1000']
+    ignorePropertyDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreAnnotated: ['Composable', 'Preview']
+    ignoreLocalVariableDeclaration: true
+  ReturnCount:
+    # The repositories guard-clause their way out on validation failures, which
+    # reads better than one deeply nested expression.
+    max: 6
+    excludeGuardClauses: true
+  UnusedPrivateMember:
+    active: true
+  ForbiddenComment:
+    # Flagging TODO is useful; flagging the others is noise.
+    comments:
+      - reason: 'Track work in the issue tracker, not in a comment that never expires.'
+        value: 'FIXME:'
+      - reason: 'Leftover debugging marker.'
+        value: 'STOPSHIP:'
+  MaxLineLength:
+    maxLineLength: 120
+    excludeCommentStatements: false
+  ThrowsCount:
+    max: 3
+  LoopWithTooManyJumpStatements:
+    maxJumpCount: 3
+
+exceptions:
+  TooGenericExceptionCaught:
+    # `Exception` is deliberately absent from this list: the JSON mapper and the
+    # preferences store catch broadly on purpose, because a malformed payload or
+    # a corrupt preferences file must degrade rather than crash. Catching
+    # `Throwable` or `Error` stays flagged.
+    exceptionNames:
+      - 'ArrayIndexOutOfBoundsException'
+      - 'Error'
+      - 'IndexOutOfBoundsException'
+      - 'NullPointerException'
+      - 'Throwable'
+  SwallowedException:
+    ignoredExceptionTypes:
+      - 'InterruptedException'
+      - 'NumberFormatException'
+      - 'ParseException'
+
+formatting:
+  # detekt-formatting wraps ktlint. Autocorrect is off here so the build never
+  # rewrites files behind the developer's back; run `detektFormat` explicitly.
+  autoCorrect: false
+  MaximumLineLength:
+    maxLineLength: 120
+  FunctionNaming:
+    active: false  # Duplicates the naming>FunctionNaming rule above.
+  ArgumentListWrapping:
+    active: false  # Fights Compose's trailing-lambda formatting.
+  Wrapping:
+    active: false
+  MultiLineIfElse:
+    active: false
+
+comments:
+  UndocumentedPublicClass:
+    active: false
+  UndocumentedPublicFunction:
+    active: false
+  CommentOverPrivateFunction:
+    active: false
+
+potential-bugs:
+  # These are the rules worth having — real defects rather than style.
+  UnsafeCallOnNullableType:
+    active: true
+  UnreachableCode:
+    active: true
+  IgnoredReturnValue:
+    active: true
+  ImplicitDefaultLocale:
+    # `String.format` / `toUpperCase` without a Locale silently misbehave in
+    # Turkish locales — a classic Android bug.
+    active: true
+
+coroutines:
+  GlobalCoroutineUsage:
+    active: true
+  SuspendFunWithFlowReturnType:
+    active: true
+  InjectDispatcher:
+    # Dispatchers are constructor parameters in this project precisely so tests
+    # can substitute them; hard-coding one would undo that.
+    active: true

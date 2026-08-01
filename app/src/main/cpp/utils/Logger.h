@@ -16,19 +16,18 @@ namespace tien::utils {
 
 enum class LogLevel {
     Verbose = ANDROID_LOG_VERBOSE,
-    Debug   = ANDROID_LOG_DEBUG,
-    Info    = ANDROID_LOG_INFO,
-    Warn    = ANDROID_LOG_WARN,
-    Error   = ANDROID_LOG_ERROR,
-    Fatal   = ANDROID_LOG_FATAL
+    Debug = ANDROID_LOG_DEBUG,
+    Info = ANDROID_LOG_INFO,
+    Warn = ANDROID_LOG_WARN,
+    Error = ANDROID_LOG_ERROR,
+    Fatal = ANDROID_LOG_FATAL
 };
 
 constexpr const char* kDefaultTag = "TienCore";
 
 // format(printf, ...) lets -Wformat validate every call site at compile time,
 // turning a mismatched directive into a build warning instead of a crash.
-#define TIEN_PRINTF_LIKE(fmt_idx, args_idx) \
-    __attribute__((format(printf, fmt_idx, args_idx)))
+#define TIEN_PRINTF_LIKE(fmt_idx, args_idx) __attribute__((format(printf, fmt_idx, args_idx)))
 
 inline void vlog(LogLevel level, const char* tag, const char* fmt, va_list args) {
     __android_log_vprint(static_cast<int>(level), tag, fmt, args);
@@ -60,4 +59,4 @@ TIEN_DEFINE_LOG_FN(e, LogLevel::Error)
 
 #undef TIEN_DEFINE_LOG_FN
 
-} // namespace tien::utils
+}  // namespace tien::utils

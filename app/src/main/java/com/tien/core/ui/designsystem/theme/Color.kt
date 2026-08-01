@@ -42,13 +42,13 @@ internal val Graphite300 = Color(0xFF9AA29E)
 // ── Urgency: the warm half of the system ────────────────────────────────────
 // Used only for deadlines and priority. Nothing else in the app is allowed to
 // be warm, which is what makes these read as a signal.
-internal val Clay600 = Color(0xFFA3402F)   // overdue
+internal val Clay600 = Color(0xFFA3402F) // overdue
 internal val Clay400 = Color(0xFFD9705C)
 internal val Clay100 = Color(0xFFFBE0DA)
-internal val Ochre600 = Color(0xFFB4690E)  // due today
+internal val Ochre600 = Color(0xFFB4690E) // due today
 internal val Ochre400 = Color(0xFFE8A33D)
 internal val Ochre100 = Color(0xFFFDEBD0)
-internal val Moss600 = Color(0xFF4C7A2E)   // comfortably ahead
+internal val Moss600 = Color(0xFF4C7A2E) // comfortably ahead
 internal val Moss400 = Color(0xFF7FAE5C)
 internal val Moss100 = Color(0xFFE3EFD8)
 

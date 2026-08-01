@@ -13,3 +13,15 @@
 .externalNativeBuild
 .cxx
 local.properties
+.kotlin/
+
+# ── Salidas de las herramientas de calidad ───────────────────────────────────
+# Generated per build. The configuration that produces them is committed;
+# the output is not.
+build/reports/
+app/build/compose-reports/
+app/build/compose-metrics/
+
+# Lint baselines are deliberately absent: the project is at zero findings, and
+# committing an empty baseline only invites future findings to be buried in it.
+lint-baseline.xml

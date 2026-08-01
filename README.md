@@ -169,6 +169,52 @@ Todas las funciones reciben el `handle` como primer argumento.
 | `nativeQueryNotes` / `nativeQueryTasks` | sobre JSON en UTF-8 |
 | `nativeFindNote` / `nativeFindTask` | sobre JSON con 0 o 1 elemento |
 
+## Herramientas de calidad
+
+| Herramienta | Qué cubre | Configuración |
+|---|---|---|
+| **detekt** + ktlint | Análisis estático y formato de Kotlin | `config/detekt/detekt.yml` |
+| **Android Lint** | Corrección, API levels, recursos, accesibilidad | bloque `lint {}` en `app/build.gradle.kts` |
+| **compose-lint-checks** | Reglas propias de Compose: parámetros inestables, `Modifier` ausente, estado mal elevado | vía `lintChecks` |
+| **Informes del compilador de Compose** | Verifica qué composables son *skippable* y qué parámetros son estables | `-PcomposeCompilerReports=true` |
+| **Config de estabilidad de Compose** | Declara estables los tipos JDK inmutables | `compose_compiler_config.conf` |
+| **LeakCanary** | Fugas de memoria en tiempo de ejecución (solo debug) | sin configuración |
+| **clang-format** | Formato de C++ | `.clang-format` |
+| **EditorConfig** | Formato compartido entre IDE y build | `.editorconfig` |
+| **GitHub Actions** | Lint, detekt, tests, formato C++ y build en cada push | `.github/workflows/ci.yml` |
+| **Dependabot** | Actualizaciones de dependencias agrupadas | `.github/dependabot.yml` |
+
+```bash
+./gradlew detekt          # análisis estático  → build/reports/detekt/
+./gradlew lintDebug       # Android Lint       → build/reports/lint-results-debug.html
+```
+
+Formato de C++ (clang-format viene con el NDK):
+
+```bash
+CF=$ANDROID_HOME/ndk/27.0.12077973/toolchains/llvm/prebuilt/*/bin/clang-format
+$CF -i app/src/main/cpp/{core,db,jni,utils}/*.{h,cpp}
+```
+
+### Estabilidad en Compose
+
+```bash
+./gradlew :app:compileDebugKotlin -PcomposeCompilerReports=true --rerun-tasks
+# → app/build/compose-reports/app_debug-composables.txt
+```
+
+El informe dice, por cada composable, si es *skippable* y si cada parámetro es
+estable. Es la única forma de **comprobar** que una anotación `@Immutable` se
+sostiene, en vez de confiar en ella: un parámetro inestable hace que el
+composable recomponga en cada frame sin que nada lo delate.
+
+Estado actual: 25 composables *restartable skippable*, 0 no-skippable. Los
+únicos parámetros inestables son los propios ViewModels, que es lo correcto.
+
+> **Sin baseline de lint.** El proyecto está en cero hallazgos. Un baseline
+> sirve para aplazar deuda heredada; crear uno vacío solo invita a enterrar
+> hallazgos futuros dentro.
+
 ## Requisitos
 
 - JDK 17

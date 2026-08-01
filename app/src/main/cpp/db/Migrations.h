@@ -96,12 +96,9 @@ constexpr const char* kMigration_002 = R"SQL(
 
 // Append-only registry. Index i holds the migration that takes the schema
 // from version i to version i+1.
-constexpr std::array<const char*, 2> kMigrations{
-    kMigration_001,
-    kMigration_002
-};
+constexpr std::array<const char*, 2> kMigrations{kMigration_001, kMigration_002};
 
 // Current schema version — must equal kMigrations.size().
 constexpr int kSchemaVersion = static_cast<int>(kMigrations.size());
 
-} // namespace tien::db
+}  // namespace tien::db

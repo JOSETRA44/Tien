@@ -31,6 +31,11 @@ data class TienSpacing(
     val listBottom: Dp = 96.dp
 )
 
+// Design-system tokens are the documented exception to the "avoid
+// CompositionLocal" guidance: the alternative is threading spacing through
+// every composable signature. Material itself ships LocalContentColor and
+// LocalTextStyle this way.
+@Suppress("ComposeCompositionLocalUsage")
 val LocalTienSpacing = staticCompositionLocalOf { TienSpacing() }
 
 /**
@@ -46,4 +51,5 @@ data class TienElevation(
     val overlay: Dp = 6.dp
 )
 
+@Suppress("ComposeCompositionLocalUsage")
 val LocalTienElevation = staticCompositionLocalOf { TienElevation() }

@@ -72,7 +72,8 @@ fun TaskEditorSheet(
     initialPriority: Priority,
     isEditing: Boolean,
     onDismiss: () -> Unit,
-    onSave: (title: String, details: String, dueAt: Long, priority: Priority) -> Unit
+    onSave: (title: String, details: String, dueAt: Long, priority: Priority) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var title by rememberSaveable(initialTitle) { mutableStateOf(initialTitle) }
     var details by rememberSaveable(initialDetails) { mutableStateOf(initialDetails) }
@@ -100,7 +101,8 @@ fun TaskEditorSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
+        modifier = modifier
     ) {
         Column(
             modifier = Modifier

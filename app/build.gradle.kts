@@ -65,6 +65,76 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+
+        // ── Informes del compilador de Compose ────────────────────────────────
+        // Emits, per composable, whether it is skippable/restartable and whether
+        // each parameter is stable. That is the only way to *verify* an
+        // @Immutable claim rather than trust it: an unstable parameter silently
+        // makes a composable recompose on every frame.
+        //
+        //   ./gradlew assembleRelease -PcomposeCompilerReports=true
+        //   → build/compose-reports/*.txt  and  build/compose-metrics/*.json
+        if (project.findProperty("composeCompilerReports") == "true") {
+            freeCompilerArgs += listOf(
+                "-P",
+                "plugin:androidx.compose.compiler.plugins.kotlin:reportsDestination=" +
+                    layout.buildDirectory.dir("compose-reports").get().asFile.absolutePath,
+                "-P",
+                "plugin:androidx.compose.compiler.plugins.kotlin:metricsDestination=" +
+                    layout.buildDirectory.dir("compose-metrics").get().asFile.absolutePath
+            )
+        }
+    }
+
+    // ── Android Lint ─────────────────────────────────────────────────────────
+    // Lint shipped with AGP but was never configured, so it ran with defaults
+    // and nothing ever failed on its findings.
+    lint {
+        // Correctness and security issues stop the build; style opinions do not.
+        abortOnError = true
+        warningsAsErrors = false
+
+        // A missing translation or an unused resource is worth knowing about.
+        checkDependencies = true
+        checkReleaseBuilds = true
+        checkTestSources = true
+
+        // Promote the checks that map to real user-visible defects.
+        error += listOf(
+            "UnsafeOptInUsageError",
+            "WrongThread",
+            "WrongConstant",
+            "Recycle",              // unclosed Cursor / TypedArray
+            "SuspiciousIndentation",
+            "StringFormatInvalid",
+            "StringFormatMatches",
+            "InlinedApi",
+            "NewApi",               // API level guards — minSdk is 24
+            "ObsoleteSdkInt"
+        )
+
+        disable += listOf(
+            // Not applicable: the app has no deep links to index.
+            "GoogleAppIndexingWarning",
+            "MissingApplicationIcon",
+
+            // Dependency freshness is Dependabot's job (.github/dependabot.yml).
+            // Leaving it to lint means every build reports staleness that only a
+            // deliberate, tested upgrade should resolve — noise that trains
+            // people to ignore lint output.
+            "GradleDependency",
+            "NewerVersionAvailable",
+            "AndroidGradlePluginVersion"
+        )
+
+        // No baseline file. The project is at zero lint errors, and a baseline
+        // is a way to *defer* findings — worth adding only when inheriting debt
+        // that cannot be paid down at once.
+
+        htmlReport = true
+        sarifReport = true   // ingested by GitHub code scanning
+        xmlReport = false
+        textReport = false
     }
 
     externalNativeBuild {
@@ -78,18 +148,27 @@ android {
         compose = true
     }
 
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
-
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
             isReturnDefaultValues = true
         }
     }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+}
+
+// ── Estabilidad de Compose ───────────────────────────────────────────────────
+// The compiler cannot infer stability for JDK types, so it treats every one as
+// unstable — which then infects any composable taking one as a parameter. The
+// config file lists the types that are genuinely immutable and safe to trust.
+composeCompiler {
+    stabilityConfigurationFile =
+        rootProject.layout.projectDirectory.file("compose_compiler_config.conf")
 }
 
 dependencies {
@@ -120,9 +199,22 @@ dependencies {
     // ── Preferences ───────────────────────────────────────────────────────────
     implementation(libs.androidx.datastore.preferences)
 
+    // ── Reglas de lint específicas de Compose ─────────────────────────────────
+    // Catches what stock lint cannot see: unstable parameters that defeat
+    // skipping, composables that forget to accept a Modifier, state hoisted to
+    // the wrong level. `lintChecks` ships them into the lint run only — nothing
+    // is added to the APK.
+    lintChecks(libs.compose.lint.checks)
+
     // ── Debug tooling ─────────────────────────────────────────────────────────
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    // Watches for retained objects. Apt here specifically because the app now
+    // holds a process-long native connection and ViewModels that own Flow
+    // collectors — the two shapes that leak an Activity if they capture one.
+    // debugImplementation only, so no LeakCanary code reaches a release build.
+    debugImplementation(libs.leakcanary.android)
 
     // ── Tests ─────────────────────────────────────────────────────────────────
     testImplementation(libs.junit)

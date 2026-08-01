@@ -1,5 +1,6 @@
 package com.tien.core.core.time
 
+import androidx.compose.runtime.Immutable
 import java.time.Duration
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -17,7 +18,15 @@ import java.util.Locale
  * yields wrong dates rather than an exception, so it fails silently.
  *
  * `java.time` formatters are immutable and safe to share.
+ *
+ * `@Immutable` is a promise, and this class keeps it: every field is a `val`
+ * holding an immutable value. It matters because the Compose compiler cannot
+ * infer stability through `Locale` and `DateTimeFormatter` (Java types it knows
+ * nothing about), so without the annotation this class is treated as unstable —
+ * and it is a parameter of `NoteCard` and `TaskCard`, the composables inside the
+ * scrolling lists where skipping matters most.
  */
+@Immutable
 class DateTimeLabels(
     private val clock: TienClock,
     private val locale: Locale = Locale.getDefault()
@@ -65,7 +74,7 @@ class DateTimeLabels(
         // Future timestamps (clock skew, a restored note) read as "now" rather
         // than "hace -3 min".
         if (elapsed.isNegative || elapsed.toMinutes() < 1) return "Ahora mismo"
-        if (elapsed.toMinutes() < 60) return "Hace ${elapsed.toMinutes()} min"
+        if (elapsed.toMinutes() < MINUTES_PER_HOUR) return "Hace ${elapsed.toMinutes()} min"
 
         val date = clock.toLocalDate(epochSeconds)
         val today = clock.today()
@@ -96,6 +105,11 @@ class DateTimeLabels(
     fun weekdayShort(date: LocalDate): String =
         date.dayOfWeek.getDisplayName(TextStyle.SHORT, locale)
             .replaceFirstChar { it.titlecase(locale) }
+
+    private companion object {
+        /** Boundary between the "minutes ago" and the calendar-day regimes. */
+        const val MINUTES_PER_HOUR = 60L
+    }
 
     /**
      * Deadline label for a task, prefixed with urgency:

@@ -1,0 +1,150 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  # A new push supersedes the run in flight for the same ref.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx3g
+
+jobs:
+  # ── Fast feedback: everything that does not need the NDK ──────────────────
+  # Split out because the native build compiles a 9.5 MB SQLite amalgamation and
+  # takes minutes. A Kotlin typo should not wait for it.
+  verify:
+    name: Lint, detekt and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: detekt
+        run: ./gradlew detekt --no-daemon
+
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest --no-daemon
+
+      - name: Android Lint
+        run: ./gradlew lintDebug --no-daemon
+
+      # SARIF feeds GitHub's Security tab, so findings appear inline on the PR
+      # instead of only inside a log nobody opens.
+      - name: Upload detekt findings
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        continue-on-error: true
+        with:
+          sarif_file: app/build/reports/detekt/detekt.sarif
+          category: detekt
+
+      - name: Upload lint findings
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        continue-on-error: true
+        with:
+          sarif_file: app/build/reports/lint-results-debug.sarif
+          category: android-lint
+
+      - name: Upload test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: app/build/reports/tests/
+          retention-days: 7
+
+  # ── C++ formatting ────────────────────────────────────────────────────────
+  # Seconds to run, and it keeps the native sources from drifting back into the
+  # two competing styles they started in.
+  clang-format:
+    name: C++ formatting
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format-18
+
+      - name: Check formatting
+        run: |
+          # sqlite3/ is a third-party amalgamation — never reformat it.
+          find app/src/main/cpp \
+            \( -path '*/sqlite3' -prune \) -o \
+            \( -name '*.cpp' -o -name '*.h' \) -print \
+          | xargs clang-format-18 --dry-run --Werror
+
+  # ── Full build, including the NDK ─────────────────────────────────────────
+  build:
+    name: Assemble debug and release
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: verify
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      # The runner images ship an NDK, but pinning the version keeps the native
+      # build reproducible instead of moving with the image.
+      - name: Install NDK
+        run: |
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "ndk;27.0.12077973" "cmake;3.22.1"
+
+      - name: Assemble debug
+        run: ./gradlew assembleDebug --no-daemon
+
+      # Release runs R8. It is in CI specifically because a missing keep rule
+      # produces an APK that builds fine and then dies on the JNI lookup at
+      # runtime — a failure debug builds never reproduce.
+      - name: Assemble release
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Verify the JNI class survived R8
+        run: |
+          MAPPING=app/build/outputs/mapping/release/mapping.txt
+          if ! grep -q 'com.tien.core.data.nativedb.NativeDatabase -> com.tien.core.data.nativedb.NativeDatabase' "$MAPPING"; then
+            echo "::error::R8 renamed NativeDatabase. Native symbol lookup resolves by name, so the release build would fail with UnsatisfiedLinkError. Check proguard-rules.pro."
+            exit 1
+          fi
+          echo "NativeDatabase kept unobfuscated."
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: apks
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/release/*.apk
+          retention-days: 14

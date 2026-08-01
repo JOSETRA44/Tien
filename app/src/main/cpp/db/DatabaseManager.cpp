@@ -34,17 +34,14 @@ inline std::string likeContains(const std::string& raw) {
 
 const char* orderClauseFor(core::NoteSort sort) {
     switch (sort) {
-        case core::NoteSort::OldestFirst:
-            return " ORDER BY pinned DESC, updated_at ASC";
-        case core::NoteSort::TitleAsc:
-            return " ORDER BY pinned DESC, title COLLATE NOCASE ASC";
+        case core::NoteSort::OldestFirst: return " ORDER BY pinned DESC, updated_at ASC";
+        case core::NoteSort::TitleAsc: return " ORDER BY pinned DESC, title COLLATE NOCASE ASC";
         case core::NoteSort::RecentlyUpdated:
-        default:
-            return " ORDER BY pinned DESC, updated_at DESC";
+        default: return " ORDER BY pinned DESC, updated_at DESC";
     }
 }
 
-} // namespace
+}  // namespace
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  Stmt — RAII Prepared Statement
@@ -57,8 +54,7 @@ std::unique_ptr<Stmt> Stmt::prepare(sqlite3* db, const std::string& sql) {
     }
 
     sqlite3_stmt* raw = nullptr;
-    int rc = sqlite3_prepare_v2(db, sql.c_str(),
-                                static_cast<int>(sql.size()) + 1, &raw, nullptr);
+    int rc = sqlite3_prepare_v2(db, sql.c_str(), static_cast<int>(sql.size()) + 1, &raw, nullptr);
     if (rc != SQLITE_OK) {
         utils::e("Stmt::prepare — error %d: %s", rc, sqlite3_errmsg(db));
         if (raw) sqlite3_finalize(raw);  // non-null on some error paths
@@ -94,8 +90,8 @@ bool Stmt::bindText(int idx, const std::string& val) {
     if (!stmt_) return false;
     // SQLITE_TRANSIENT → SQLite copies immediately, so `val` may go out of
     // scope safely.
-    int rc = sqlite3_bind_text(stmt_, idx, val.c_str(),
-                               static_cast<int>(val.size()), SQLITE_TRANSIENT);
+    int rc =
+        sqlite3_bind_text(stmt_, idx, val.c_str(), static_cast<int>(val.size()), SQLITE_TRANSIENT);
     if (rc != SQLITE_OK) {
         utils::e("Stmt::bindText — error %d on index %d", rc, idx);
         return false;
@@ -200,14 +196,12 @@ std::unique_ptr<DatabaseManager> DatabaseManager::open(const std::string& db_pat
     // FULLMUTEX (serialized) rather than NOMUTEX: this single connection is
     // shared by every coroutine on Dispatchers.IO, so SQLite must serialise
     // access itself.
-    const int flags = SQLITE_OPEN_READWRITE
-                    | SQLITE_OPEN_CREATE
-                    | SQLITE_OPEN_FULLMUTEX;
+    const int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX;
 
     int rc = sqlite3_open_v2(db_path.c_str(), &raw, flags, nullptr);
     if (rc != SQLITE_OK) {
-        utils::e("DatabaseManager::open — failed to open %s : %s",
-                 db_path.c_str(), raw ? sqlite3_errmsg(raw) : "unknown");
+        utils::e("DatabaseManager::open — failed to open %s : %s", db_path.c_str(),
+                 raw ? sqlite3_errmsg(raw) : "unknown");
         if (raw) sqlite3_close_v2(raw);
         return nullptr;
     }
@@ -268,10 +262,9 @@ bool DatabaseManager::applyPragmas() {
     }
 
     return executeLocked(
-        "PRAGMA synchronous=NORMAL;"   // durable enough under WAL, far fewer fsyncs
+        "PRAGMA synchronous=NORMAL;"  // durable enough under WAL, far fewer fsyncs
         "PRAGMA foreign_keys=ON;"
-        "PRAGMA temp_store=MEMORY;"
-    );
+        "PRAGMA temp_store=MEMORY;");
 }
 
 // ── Migrations ─────────────────────────────────────────────────────────────
@@ -300,8 +293,8 @@ bool DatabaseManager::runMigrations() {
 
     if (current > kSchemaVersion) {
         // The file was written by a newer build. Refusing beats corrupting it.
-        utils::e("DatabaseManager — database is v%d but this build only knows v%d",
-                 current, kSchemaVersion);
+        utils::e("DatabaseManager — database is v%d but this build only knows v%d", current,
+                 kSchemaVersion);
         return false;
     }
 
@@ -330,7 +323,7 @@ bool DatabaseManager::executeLocked(const std::string& sql) {
     }
 
     char* err = nullptr;
-    int rc = sqlite3_exec(db_, sql.c_str(), nullptr, nullptr, &err);
+    int   rc = sqlite3_exec(db_, sql.c_str(), nullptr, nullptr, &err);
     if (rc != SQLITE_OK) {
         utils::e("DatabaseManager::execute — SQL error: %s", err ? err : "unknown");
         if (err) sqlite3_free(err);
@@ -343,8 +336,7 @@ int64_t DatabaseManager::runMutationLocked(const std::string& label, Stmt& stmt)
     const int rc = stmt.step();
     if (rc != SQLITE_DONE) {
         utils::e("%s — step returned %d: %s", label.c_str(), rc, sqlite3_errmsg(db_));
-        return asCode(rc == SQLITE_CONSTRAINT ? DbStatus::ErrorConflict
-                                              : DbStatus::ErrorGeneric);
+        return asCode(rc == SQLITE_CONSTRAINT ? DbStatus::ErrorConflict : DbStatus::ErrorGeneric);
     }
     const int changed = sqlite3_changes(db_);
     if (changed <= 0) {
@@ -362,13 +354,13 @@ int64_t DatabaseManager::insertNote(const std::string& title, const std::string&
     if (title.empty()) return asCode(DbStatus::ErrorInvalid);
 
     auto stmt = Stmt::prepare(db_,
-        "INSERT INTO notes (title, content, created_at, updated_at, pinned) "
-        "VALUES (?, ?, ?, ?, 0)");
+                              "INSERT INTO notes (title, content, created_at, updated_at, pinned) "
+                              "VALUES (?, ?, ?, ?, 0)");
     if (!stmt) return asCode(DbStatus::ErrorGeneric);
 
     const int64_t now = nowEpochSeconds();
-    if (!stmt->bindText(1, title) || !stmt->bindText(2, content) ||
-        !stmt->bindInt64(3, now)  || !stmt->bindInt64(4, now)) {
+    if (!stmt->bindText(1, title) || !stmt->bindText(2, content) || !stmt->bindInt64(3, now) ||
+        !stmt->bindInt64(4, now)) {
         return asCode(DbStatus::ErrorGeneric);
     }
 
@@ -388,8 +380,8 @@ int64_t DatabaseManager::updateNote(int64_t id, const std::string& title,
     if (!db_) return asCode(DbStatus::ErrorClosed);
     if (id <= 0 || title.empty()) return asCode(DbStatus::ErrorInvalid);
 
-    auto stmt = Stmt::prepare(db_,
-        "UPDATE notes SET title = ?, content = ?, updated_at = ? WHERE id = ?");
+    auto stmt =
+        Stmt::prepare(db_, "UPDATE notes SET title = ?, content = ?, updated_at = ? WHERE id = ?");
     if (!stmt) return asCode(DbStatus::ErrorGeneric);
 
     if (!stmt->bindText(1, title) || !stmt->bindText(2, content) ||
@@ -432,15 +424,15 @@ int64_t DatabaseManager::restoreNote(const core::Note& note) {
 
     // Explicit id keeps undo idempotent — the restored note is the same note,
     // not a copy at the top of the list.
-    auto stmt = Stmt::prepare(db_,
-        "INSERT INTO notes (id, title, content, created_at, updated_at, pinned) "
-        "VALUES (?, ?, ?, ?, ?, ?)");
+    auto stmt =
+        Stmt::prepare(db_,
+                      "INSERT INTO notes (id, title, content, created_at, updated_at, pinned) "
+                      "VALUES (?, ?, ?, ?, ?, ?)");
     if (!stmt) return asCode(DbStatus::ErrorGeneric);
 
-    if (!stmt->bindInt64(1, note.id)      || !stmt->bindText(2, note.title) ||
-        !stmt->bindText(3, note.content)  || !stmt->bindInt64(4, note.created_at) ||
-        !stmt->bindInt64(5, note.updated_at) ||
-        !stmt->bindInt(6, note.pinned ? 1 : 0)) {
+    if (!stmt->bindInt64(1, note.id) || !stmt->bindText(2, note.title) ||
+        !stmt->bindText(3, note.content) || !stmt->bindInt64(4, note.created_at) ||
+        !stmt->bindInt64(5, note.updated_at) || !stmt->bindInt(6, note.pinned ? 1 : 0)) {
         return asCode(DbStatus::ErrorGeneric);
     }
 
@@ -453,14 +445,12 @@ int64_t DatabaseManager::restoreNote(const core::Note& note) {
     return note.id;
 }
 
-std::vector<core::Note> DatabaseManager::queryNotes(const std::string& query,
-                                                    core::NoteSort sort) {
+std::vector<core::Note> DatabaseManager::queryNotes(const std::string& query, core::NoteSort sort) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!db_) return {};
 
-    std::string sql =
-        "SELECT id, title, content, created_at, updated_at, pinned FROM notes";
-    const bool filtered = !query.empty();
+    std::string sql = "SELECT id, title, content, created_at, updated_at, pinned FROM notes";
+    const bool  filtered = !query.empty();
     if (filtered) {
         sql += R"( WHERE (title LIKE ?1 ESCAPE '\' OR content LIKE ?1 ESCAPE '\'))";
     }
@@ -473,14 +463,9 @@ std::vector<core::Note> DatabaseManager::queryNotes(const std::string& query,
     std::vector<core::Note> notes;
     notes.reserve(32);
     while (stmt->step() == SQLITE_ROW) {
-        notes.push_back(core::Note{
-            stmt->columnInt64(0),
-            stmt->columnText(1),
-            stmt->columnText(2),
-            stmt->columnInt64(3),
-            stmt->columnInt64(4),
-            stmt->columnBool(5)
-        });
+        notes.push_back(core::Note{stmt->columnInt64(0), stmt->columnText(1), stmt->columnText(2),
+                                   stmt->columnInt64(3), stmt->columnInt64(4),
+                                   stmt->columnBool(5)});
     }
     return notes;
 }
@@ -490,19 +475,13 @@ std::optional<core::Note> DatabaseManager::findNote(int64_t id) {
     if (!db_ || id <= 0) return std::nullopt;
 
     auto stmt = Stmt::prepare(db_,
-        "SELECT id, title, content, created_at, updated_at, pinned "
-        "FROM notes WHERE id = ?");
+                              "SELECT id, title, content, created_at, updated_at, pinned "
+                              "FROM notes WHERE id = ?");
     if (!stmt || !stmt->bindInt64(1, id)) return std::nullopt;
     if (stmt->step() != SQLITE_ROW) return std::nullopt;
 
-    return core::Note{
-        stmt->columnInt64(0),
-        stmt->columnText(1),
-        stmt->columnText(2),
-        stmt->columnInt64(3),
-        stmt->columnInt64(4),
-        stmt->columnBool(5)
-    };
+    return core::Note{stmt->columnInt64(0), stmt->columnText(1),  stmt->columnText(2),
+                      stmt->columnInt64(3), stmt->columnInt64(4), stmt->columnBool(5)};
 }
 
 // ── Tasks ──────────────────────────────────────────────────────────────────
@@ -513,15 +492,16 @@ int64_t DatabaseManager::insertTask(const std::string& title, const std::string&
     if (!db_) return asCode(DbStatus::ErrorClosed);
     if (title.empty() || dueAt <= 0) return asCode(DbStatus::ErrorInvalid);
 
-    auto stmt = Stmt::prepare(db_,
+    auto stmt = Stmt::prepare(
+        db_,
         "INSERT INTO tasks (title, details, due_at, created_at, updated_at, priority, is_done) "
         "VALUES (?, ?, ?, ?, ?, ?, 0)");
     if (!stmt) return asCode(DbStatus::ErrorGeneric);
 
     const int64_t now = nowEpochSeconds();
-    if (!stmt->bindText(1, title)   || !stmt->bindText(2, details) ||
-        !stmt->bindInt64(3, dueAt)  || !stmt->bindInt64(4, now) ||
-        !stmt->bindInt64(5, now)    || !stmt->bindInt(6, core::clampPriority(priority))) {
+    if (!stmt->bindText(1, title) || !stmt->bindText(2, details) || !stmt->bindInt64(3, dueAt) ||
+        !stmt->bindInt64(4, now) || !stmt->bindInt64(5, now) ||
+        !stmt->bindInt(6, core::clampPriority(priority))) {
         return asCode(DbStatus::ErrorGeneric);
     }
 
@@ -538,13 +518,14 @@ int64_t DatabaseManager::updateTask(int64_t id, const std::string& title,
     if (!db_) return asCode(DbStatus::ErrorClosed);
     if (id <= 0 || title.empty() || dueAt <= 0) return asCode(DbStatus::ErrorInvalid);
 
-    auto stmt = Stmt::prepare(db_,
+    auto stmt = Stmt::prepare(
+        db_,
         "UPDATE tasks SET title = ?, details = ?, due_at = ?, priority = ?, updated_at = ? "
         "WHERE id = ?");
     if (!stmt) return asCode(DbStatus::ErrorGeneric);
 
-    if (!stmt->bindText(1, title)  || !stmt->bindText(2, details) ||
-        !stmt->bindInt64(3, dueAt) || !stmt->bindInt(4, core::clampPriority(priority)) ||
+    if (!stmt->bindText(1, title) || !stmt->bindText(2, details) || !stmt->bindInt64(3, dueAt) ||
+        !stmt->bindInt(4, core::clampPriority(priority)) ||
         !stmt->bindInt64(5, nowEpochSeconds()) || !stmt->bindInt64(6, id)) {
         return asCode(DbStatus::ErrorGeneric);
     }
@@ -556,12 +537,11 @@ int64_t DatabaseManager::setTaskDone(int64_t id, bool done) {
     if (!db_) return asCode(DbStatus::ErrorClosed);
     if (id <= 0) return asCode(DbStatus::ErrorInvalid);
 
-    auto stmt = Stmt::prepare(db_,
-        "UPDATE tasks SET is_done = ?, updated_at = ? WHERE id = ?");
+    auto stmt = Stmt::prepare(db_, "UPDATE tasks SET is_done = ?, updated_at = ? WHERE id = ?");
     if (!stmt) return asCode(DbStatus::ErrorGeneric);
 
-    if (!stmt->bindInt(1, done ? 1 : 0) ||
-        !stmt->bindInt64(2, nowEpochSeconds()) || !stmt->bindInt64(3, id)) {
+    if (!stmt->bindInt(1, done ? 1 : 0) || !stmt->bindInt64(2, nowEpochSeconds()) ||
+        !stmt->bindInt64(3, id)) {
         return asCode(DbStatus::ErrorGeneric);
     }
     return runMutationLocked("setTaskDone", *stmt);
@@ -583,13 +563,14 @@ int64_t DatabaseManager::restoreTask(const core::Task& task) {
     if (!db_) return asCode(DbStatus::ErrorClosed);
     if (task.id <= 0 || task.title.empty()) return asCode(DbStatus::ErrorInvalid);
 
-    auto stmt = Stmt::prepare(db_,
+    auto stmt = Stmt::prepare(
+        db_,
         "INSERT INTO tasks (id, title, details, due_at, created_at, updated_at, priority, is_done) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     if (!stmt) return asCode(DbStatus::ErrorGeneric);
 
-    if (!stmt->bindInt64(1, task.id)         || !stmt->bindText(2, task.title) ||
-        !stmt->bindText(3, task.details)     || !stmt->bindInt64(4, task.due_at) ||
+    if (!stmt->bindInt64(1, task.id) || !stmt->bindText(2, task.title) ||
+        !stmt->bindText(3, task.details) || !stmt->bindInt64(4, task.due_at) ||
         !stmt->bindInt64(5, task.created_at) || !stmt->bindInt64(6, task.updated_at) ||
         !stmt->bindInt(7, core::clampPriority(task.priority)) ||
         !stmt->bindInt(8, task.is_done ? 1 : 0)) {
@@ -606,8 +587,7 @@ int64_t DatabaseManager::restoreTask(const core::Task& task) {
 }
 
 std::vector<core::Task> DatabaseManager::queryTasks(const std::string& query,
-                                                    core::TaskFilter filter,
-                                                    int64_t dayStart,
+                                                    core::TaskFilter filter, int64_t dayStart,
                                                     int64_t dayEnd) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!db_) return {};
@@ -630,8 +610,8 @@ std::vector<core::Task> DatabaseManager::queryTasks(const std::string& query,
 
     if (!query.empty()) {
         const int idx = nextIndex++;
-        addClause("(title LIKE ?" + std::to_string(idx) + R"( ESCAPE '\' OR details LIKE ?)"
-                  + std::to_string(idx) + R"( ESCAPE '\'))");
+        addClause("(title LIKE ?" + std::to_string(idx) + R"( ESCAPE '\' OR details LIKE ?)" +
+                  std::to_string(idx) + R"( ESCAPE '\'))");
         textBinds.push_back(likeContains(query));
     }
 
@@ -643,9 +623,9 @@ std::vector<core::Task> DatabaseManager::queryTasks(const std::string& query,
 
     if (dayStart > 0 && dayEnd > dayStart) {
         const int startIdx = nextIndex++;
-        const int endIdx   = nextIndex++;
-        addClause("due_at >= ?" + std::to_string(startIdx) +
-                  " AND due_at < ?" + std::to_string(endIdx));
+        const int endIdx = nextIndex++;
+        addClause("due_at >= ?" + std::to_string(startIdx) + " AND due_at < ?" +
+                  std::to_string(endIdx));
         intBinds.push_back(dayStart);
         intBinds.push_back(dayEnd);
     }
@@ -667,16 +647,9 @@ std::vector<core::Task> DatabaseManager::queryTasks(const std::string& query,
     std::vector<core::Task> tasks;
     tasks.reserve(32);
     while (stmt->step() == SQLITE_ROW) {
-        tasks.push_back(core::Task{
-            stmt->columnInt64(0),
-            stmt->columnText(1),
-            stmt->columnText(2),
-            stmt->columnInt64(3),
-            stmt->columnInt64(4),
-            stmt->columnInt64(5),
-            stmt->columnInt(6),
-            stmt->columnBool(7)
-        });
+        tasks.push_back(core::Task{stmt->columnInt64(0), stmt->columnText(1), stmt->columnText(2),
+                                   stmt->columnInt64(3), stmt->columnInt64(4), stmt->columnInt64(5),
+                                   stmt->columnInt(6), stmt->columnBool(7)});
     }
     return tasks;
 }
@@ -685,22 +658,16 @@ std::optional<core::Task> DatabaseManager::findTask(int64_t id) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!db_ || id <= 0) return std::nullopt;
 
-    auto stmt = Stmt::prepare(db_,
+    auto stmt = Stmt::prepare(
+        db_,
         "SELECT id, title, details, due_at, created_at, updated_at, priority, is_done "
         "FROM tasks WHERE id = ?");
     if (!stmt || !stmt->bindInt64(1, id)) return std::nullopt;
     if (stmt->step() != SQLITE_ROW) return std::nullopt;
 
-    return core::Task{
-        stmt->columnInt64(0),
-        stmt->columnText(1),
-        stmt->columnText(2),
-        stmt->columnInt64(3),
-        stmt->columnInt64(4),
-        stmt->columnInt64(5),
-        stmt->columnInt(6),
-        stmt->columnBool(7)
-    };
+    return core::Task{stmt->columnInt64(0), stmt->columnText(1),  stmt->columnText(2),
+                      stmt->columnInt64(3), stmt->columnInt64(4), stmt->columnInt64(5),
+                      stmt->columnInt(6),   stmt->columnBool(7)};
 }
 
-} // namespace tien::db
+}  // namespace tien::db

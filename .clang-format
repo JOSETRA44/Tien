@@ -1,0 +1,70 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  Tien — C++ formatting
+#
+#  The native sources were written in two different styles: DatabaseManager.cpp
+#  uses 4-space continuation and left-aligned braces, while native-lib.cpp had
+#  the JNI functions indented an extra level under `extern "C"`. Pinning the
+#  rules here settles it, and lets CI check formatting instead of reviewers.
+#
+#  Run it:
+#    clang-format -i app/src/main/cpp/{core,db,jni,utils}/*.{h,cpp}
+#  Check without writing (what CI does):
+#    clang-format --dry-run --Werror <files>
+#
+#  clang-format ships with the NDK:
+#    $ANDROID_SDK/ndk/<version>/toolchains/llvm/prebuilt/*/bin/clang-format
+# ═══════════════════════════════════════════════════════════════════════════
+---
+Language: Cpp
+BasedOnStyle: Google
+
+# Google's 80 is tight for JNI signatures, which carry long mangled names.
+ColumnLimit: 100
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+AccessModifierOffset: -4
+
+# `extern "C" { … }` wraps the whole JNI surface. Indenting inside it would push
+# every entry point one level right for no structural reason.
+IndentExternBlock: NoIndent
+NamespaceIndentation: None
+FixNamespaceComments: true
+
+# The domain structs in core/Models.h are read as a table of fields: the type
+# column lines up, and the trailing comment column lines up with it. Google's
+# style collapses both. Keeping them aligned is the whole reason this file
+# overrides the base style rather than just inheriting it.
+AlignTrailingComments: true
+AlignConsecutiveDeclarations: true
+AlignConsecutiveAssignments: false
+AlignAfterOpenBracket: Align
+
+# An enum listing the persisted values of a domain concept earns one line per
+# entry — collapsing `Priority` onto a single line hides that these integers are
+# an on-disk contract.
+AllowShortEnumsOnASingleLine: false
+
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine: false
+# The JSON escape table in native-lib.cpp is a lookup table written as a switch.
+# One line per case keeps it readable as the table it is; expanding each to
+# three lines turns 7 lines into 21 and hides the mapping.
+AllowShortCaseLabelsOnASingleLine: true
+
+# `using` order in native-lib.cpp is grouped by origin, not alphabetical.
+SortUsingDeclarations: false
+
+BreakBeforeBraces: Attach
+BreakConstructorInitializers: BeforeColon
+ConstructorInitializerIndentWidth: 4
+PointerAlignment: Left        # `sqlite3* db`, matching the existing code
+ReferenceAlignment: Left
+
+SortIncludes: false           # Include order here is deliberate: local, then system
+IncludeBlocks: Preserve
+
+SpaceAfterCStyleCast: false
+SpacesBeforeTrailingComments: 2
+Standard: c++17

@@ -11,10 +11,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -41,7 +39,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -121,7 +118,6 @@ fun AgendaScreen(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-
         AgendaHeader(
             summary = uiState.summary,
             searchVisible = searchVisible,
@@ -363,6 +359,12 @@ private fun FilterRow(
     }
 }
 
+// `List` is declared stable for this module in compose_compiler_config.conf:
+// every list reaching a composable comes from an @Immutable UI state the
+// ViewModel replaces wholesale rather than mutates. The compiler agrees — the
+// generated report shows this composable as skippable — so the lint rule is
+// the stricter of the two here.
+@Suppress("ComposeUnstableCollections")
 @Composable
 private fun DayStrip(
     days: List<DayChip>,
@@ -409,6 +411,3 @@ private fun TaskFilter.label(): String = when (this) {
     TaskFilter.PENDING -> "Pendientes"
     TaskFilter.COMPLETED -> "Completadas"
 }
-
-@Composable
-private fun Spacer8() = Spacer(Modifier.height(8.dp))
