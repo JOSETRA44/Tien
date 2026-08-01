@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.tien.dutic.domain.repository.AssignmentParserTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-08-01T20:15:40.863Z" hostname="LAPTOP-SF0JKCCR" time="0.244">
+  <properties/>
+  <testcase name="parses the official due date" classname="com.tien.dutic.domain.repository.AssignmentParserTest" time="0.156"/>
+  <testcase name="does not flag a brief that repeats the official date" classname="com.tien.dutic.domain.repository.AssignmentParserTest" time="0.01"/>
+  <testcase name="flags a date in the brief that contradicts the official one" classname="com.tien.dutic.domain.repository.AssignmentParserTest" time="0.003"/>
+  <testcase name="sin calificar is not graded" classname="com.tien.dutic.domain.repository.AssignmentParserTest" time="0.0"/>
+  <testcase name="an empty grade cell is not a grade" classname="com.tien.dutic.domain.repository.AssignmentParserTest" time="0.004"/>
+  <testcase name="reads an unsubmitted assignment" classname="com.tien.dutic.domain.repository.AssignmentParserTest" time="0.006"/>
+  <testcase name="collects only real file attachments" classname="com.tien.dutic.domain.repository.AssignmentParserTest" time="0.058"/>
+  <testcase name="graded wins over submitted" classname="com.tien.dutic.domain.repository.AssignmentParserTest" time="0.0"/>
+  <testcase name="an unrecognised state stays unknown rather than guessing" classname="com.tien.dutic.domain.repository.AssignmentParserTest" time="0.0"/>
+  <testcase name="reads a submitted assignment" classname="com.tien.dutic.domain.repository.AssignmentParserTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

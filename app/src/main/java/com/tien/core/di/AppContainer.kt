@@ -9,11 +9,15 @@ import com.tien.core.core.time.SystemTienClock
 import com.tien.core.core.time.TienClock
 import com.tien.core.data.nativedb.NativeConnection
 import com.tien.core.data.preferences.DataStorePreferencesRepository
+import com.tien.core.data.repository.BoardRepositoryImpl
 import com.tien.core.data.repository.NoteRepositoryImpl
 import com.tien.core.data.repository.TaskRepositoryImpl
+import com.tien.core.domain.repository.BoardRepository
 import com.tien.core.domain.repository.NoteRepository
 import com.tien.core.domain.repository.PreferencesRepository
 import com.tien.core.domain.repository.TaskRepository
+import com.tien.dutic.DuticClient
+import com.tien.dutic.di.DuticContainer
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 
@@ -31,7 +35,16 @@ interface AppContainer {
     val dateTimeLabels: DateTimeLabels
     val noteRepository: NoteRepository
     val taskRepository: TaskRepository
+    val boardRepository: BoardRepository
     val preferencesRepository: PreferencesRepository
+
+    /**
+     * Client for the UNSA aula virtual.
+     *
+     * Typed as the module's facade, never as its internals: :app cannot reach
+     * the repositories or the HTTP client behind it even if it wanted to.
+     */
+    val duticClient: DuticClient
 
     /** Releases process-wide resources — currently the native connection. */
     fun shutdown()
@@ -76,9 +89,19 @@ class DefaultAppContainer(
         TaskRepositoryImpl(nativeConnection, ioDispatcher)
     }
 
+    override val boardRepository: BoardRepository by lazy {
+        BoardRepositoryImpl(nativeConnection, ioDispatcher)
+    }
+
     override val preferencesRepository: PreferencesRepository by lazy {
         DataStorePreferencesRepository(context.preferencesDataStore)
     }
+
+    // Built lazily: a student who never opens the aula virtual section never
+    // pays for an OkHttp instance or a DataStore file.
+    private val duticContainer by lazy { DuticContainer(context, ioDispatcher) }
+
+    override val duticClient: DuticClient by lazy { duticContainer.client }
 
     override fun shutdown() {
         // Guarded so shutting down before anything touched the database does

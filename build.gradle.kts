@@ -1,6 +1,11 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
+    // Declared here with `apply false` so every AGP variant resolves from one
+    // classpath entry. A subproject requesting `com.android.library` with its
+    // own version fails: AGP is already on the classpath from the line below,
+    // and Gradle cannot check the two for compatibility.
     alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.android.library) apply false
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.detekt)
 }

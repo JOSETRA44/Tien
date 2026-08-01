@@ -40,6 +40,8 @@ import androidx.navigation.compose.rememberNavController
 import com.tien.core.di.AppContainer
 import com.tien.core.ui.feature.agenda.AgendaScreen
 import com.tien.core.ui.feature.agenda.AgendaViewModel
+import com.tien.core.ui.feature.board.BoardScreen
+import com.tien.core.ui.feature.board.BoardViewModel
 import com.tien.core.ui.feature.notes.NotesScreen
 import com.tien.core.ui.feature.notes.NotesViewModel
 import com.tien.core.ui.feature.settings.SettingsSheet
@@ -166,6 +168,18 @@ fun TienApp(
                         snackbarHostState = snackbarHostState,
                         showEditor = pendingCreateRoute == TienDestination.Notes.route,
                         onEditorDismissed = { pendingCreateRoute = null }
+                    )
+                }
+
+                composable(TienDestination.Board.route) {
+                    val viewModel: BoardViewModel = viewModel(
+                        factory = TienViewModelFactory.board(container)
+                    )
+                    BoardScreen(
+                        viewModel = viewModel,
+                        snackbarHostState = snackbarHostState,
+                        showCreate = pendingCreateRoute == TienDestination.Board.route,
+                        onCreateHandled = { pendingCreateRoute = null }
                     )
                 }
 

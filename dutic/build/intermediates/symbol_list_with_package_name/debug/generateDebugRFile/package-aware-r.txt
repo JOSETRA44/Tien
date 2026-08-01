@@ -1,0 +1,2 @@
+com.tien.dutic
+xml dutic_network_security_config

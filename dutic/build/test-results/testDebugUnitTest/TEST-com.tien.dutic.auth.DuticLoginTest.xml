@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.tien.dutic.auth.DuticLoginTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-08-01T20:15:40.780Z" hostname="LAPTOP-SF0JKCCR" time="0.079">
+  <properties/>
+  <testcase name="the dashboard means signed in" classname="com.tien.dutic.auth.DuticLoginTest" time="0.022"/>
+  <testcase name="missing or empty cookie headers yield null" classname="com.tien.dutic.auth.DuticLoginTest" time="0.026"/>
+  <testcase name="builds a session and derives the real semester from the url" classname="com.tien.dutic.auth.DuticLoginTest" time="0.029"/>
+  <testcase name="strips the quotes a WebView adds around evaluated javascript" classname="com.tien.dutic.auth.DuticLoginTest" time="0.0"/>
+  <testcase name="a missing sesskey produces no session" classname="com.tien.dutic.auth.DuticLoginTest" time="0.001"/>
+  <testcase name="does not match a cookie that merely contains the name" classname="com.tien.dutic.auth.DuticLoginTest" time="0.0"/>
+  <testcase name="other hosts never count as signed in" classname="com.tien.dutic.auth.DuticLoginTest" time="0.0"/>
+  <testcase name="the login page is not a signed-in url" classname="com.tien.dutic.auth.DuticLoginTest" time="0.001"/>
+  <testcase name="picks MoodleSession out of a crowded cookie header" classname="com.tien.dutic.auth.DuticLoginTest" time="0.0"/>
+  <testcase name="a missing cookie produces no session" classname="com.tien.dutic.auth.DuticLoginTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

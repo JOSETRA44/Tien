@@ -47,6 +47,7 @@ public:
     bool bindText(int idx, const std::string& val);
     bool bindInt64(int idx, int64_t val);
     bool bindInt(int idx, int val);
+    bool bindDouble(int idx, double val);
 
     // Returns SQLITE_ROW, SQLITE_DONE, or an error code.
     int step();
@@ -57,6 +58,7 @@ public:
     // ── Column access (valid only after step() returned SQLITE_ROW) ────────
     int64_t     columnInt64(int col) const;
     int         columnInt(int col) const;
+    double      columnDouble(int col) const;
     std::string columnText(int col) const;
     bool        columnBool(int col) const;
 
@@ -146,6 +148,39 @@ public:
                                        int64_t dayStart, int64_t dayEnd);
 
     std::optional<core::Task> findTask(int64_t id);
+
+    // ── Board ──────────────────────────────────────────────────────────────
+
+    // Everything pinned to `boardId`, ordered back-to-front so the renderer can
+    // draw straight down the list.
+    std::vector<core::BoardNote> queryBoardNotes(int64_t boardId);
+
+    std::vector<core::BoardLink> queryBoardLinks(int64_t boardId);
+
+    // Returns the new rowid. `z` is assigned as (current max + 1) so a new
+    // paper always lands on top of the pile.
+    int64_t insertBoardNote(int64_t boardId, const std::string& text, double x, double y,
+                            double rotation, int colorIndex, int64_t sourceNoteId);
+
+    int64_t updateBoardNoteText(int64_t id, const std::string& text);
+
+    // Position and tilt only. Split from the text update because it fires on
+    // every drop, and rewriting the note body each time would be wasted work.
+    int64_t updateBoardNoteTransform(int64_t id, double x, double y, double rotation);
+
+    int64_t updateBoardNoteSize(int64_t id, double width, double height);
+    int64_t updateBoardNoteColor(int64_t id, int colorIndex);
+
+    // Raises a paper to the top of the pile. Called when one is picked up.
+    int64_t raiseBoardNote(int64_t id);
+
+    int64_t deleteBoardNote(int64_t id);
+
+    // Restores a deleted paper with its identity and position intact.
+    int64_t restoreBoardNote(const core::BoardNote& note);
+
+    int64_t insertBoardLink(int64_t boardId, int64_t fromNoteId, int64_t toNoteId);
+    int64_t deleteBoardLink(int64_t fromNoteId, int64_t toNoteId);
 
     // ── Diagnostics ────────────────────────────────────────────────────────
     const std::string& path() const noexcept { return db_path_; }

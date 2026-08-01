@@ -146,6 +146,21 @@ std::string optionalEnvelope(const std::optional<T>& item, Appender append) {
     return ss.str();
 }
 
+void appendBoardNote(std::ostringstream& ss, const tien::core::BoardNote& n) {
+    ss << "{\"id\":" << n.id << ",\"boardId\":" << n.board_id << ",\"text\":\""
+       << jsonEscape(n.text) << '"' << ",\"x\":" << n.x << ",\"y\":" << n.y
+       << ",\"width\":" << n.width << ",\"height\":" << n.height << ",\"rotation\":" << n.rotation
+       << ",\"colorIndex\":" << n.color_index << ",\"z\":" << n.z
+       << ",\"sourceNoteId\":" << n.source_note_id << ",\"createdAt\":" << n.created_at
+       << ",\"updatedAt\":" << n.updated_at << '}';
+}
+
+void appendBoardLink(std::ostringstream& ss, const tien::core::BoardLink& l) {
+    ss << "{\"id\":" << l.id << ",\"boardId\":" << l.board_id
+       << ",\"fromNoteId\":" << l.from_note_id << ",\"toNoteId\":" << l.to_note_id
+       << ",\"createdAt\":" << l.created_at << '}';
+}
+
 std::string failureEnvelope(const std::string& message) {
     std::ostringstream ss;
     ss << R"({"ok":false,"error":")" << jsonEscape(message) << R"("})";
@@ -306,6 +321,109 @@ TIEN_JNI(jbyteArray, nativeFindTask)(JNIEnv* env, jobject, jlong handle, jlong i
     if (!db) return stdToBytes(env, failureEnvelope("database is closed"));
 
     return stdToBytes(env, optionalEnvelope(db->findTask(id), appendTask));
+}
+
+// ── Board ──────────────────────────────────────────────────────────────────
+
+TIEN_JNI(jbyteArray, nativeQueryBoardNotes)(JNIEnv* env, jobject, jlong handle, jlong boardId) {
+    auto* db = fromHandle(handle);
+    if (!db) return stdToBytes(env, failureEnvelope("database is closed"));
+
+    return stdToBytes(env, successEnvelope(db->queryBoardNotes(boardId), appendBoardNote));
+}
+
+TIEN_JNI(jbyteArray, nativeQueryBoardLinks)(JNIEnv* env, jobject, jlong handle, jlong boardId) {
+    auto* db = fromHandle(handle);
+    if (!db) return stdToBytes(env, failureEnvelope("database is closed"));
+
+    return stdToBytes(env, successEnvelope(db->queryBoardLinks(boardId), appendBoardLink));
+}
+
+TIEN_JNI(jlong, nativeInsertBoardNote)
+(JNIEnv* env, jobject, jlong handle, jlong boardId, jbyteArray jText, jdouble x, jdouble y,
+ jdouble rotation, jint colorIndex, jlong sourceNoteId) {
+    auto* db = fromHandle(handle);
+    if (!db) return asCode(DbStatus::ErrorClosed);
+    return db->insertBoardNote(boardId, bytesToStd(env, jText), x, y, rotation,
+                               static_cast<int>(colorIndex), sourceNoteId);
+}
+
+TIEN_JNI(jlong, nativeUpdateBoardNoteText)
+(JNIEnv* env, jobject, jlong handle, jlong id, jbyteArray jText) {
+    auto* db = fromHandle(handle);
+    if (!db) return asCode(DbStatus::ErrorClosed);
+    return db->updateBoardNoteText(id, bytesToStd(env, jText));
+}
+
+// Fires once per drop, not once per frame: the drag itself is local UI state.
+TIEN_JNI(jlong, nativeUpdateBoardNoteTransform)
+(JNIEnv*, jobject, jlong handle, jlong id, jdouble x, jdouble y, jdouble rotation) {
+    auto* db = fromHandle(handle);
+    if (!db) return asCode(DbStatus::ErrorClosed);
+    return db->updateBoardNoteTransform(id, x, y, rotation);
+}
+
+TIEN_JNI(jlong, nativeUpdateBoardNoteSize)
+(JNIEnv*, jobject, jlong handle, jlong id, jdouble width, jdouble height) {
+    auto* db = fromHandle(handle);
+    if (!db) return asCode(DbStatus::ErrorClosed);
+    return db->updateBoardNoteSize(id, width, height);
+}
+
+TIEN_JNI(jlong, nativeUpdateBoardNoteColor)
+(JNIEnv*, jobject, jlong handle, jlong id, jint colorIndex) {
+    auto* db = fromHandle(handle);
+    if (!db) return asCode(DbStatus::ErrorClosed);
+    return db->updateBoardNoteColor(id, static_cast<int>(colorIndex));
+}
+
+TIEN_JNI(jlong, nativeRaiseBoardNote)(JNIEnv*, jobject, jlong handle, jlong id) {
+    auto* db = fromHandle(handle);
+    if (!db) return asCode(DbStatus::ErrorClosed);
+    return db->raiseBoardNote(id);
+}
+
+TIEN_JNI(jlong, nativeDeleteBoardNote)(JNIEnv*, jobject, jlong handle, jlong id) {
+    auto* db = fromHandle(handle);
+    if (!db) return asCode(DbStatus::ErrorClosed);
+    return db->deleteBoardNote(id);
+}
+
+TIEN_JNI(jlong, nativeRestoreBoardNote)
+(JNIEnv* env, jobject, jlong handle, jlong id, jlong boardId, jbyteArray jText, jdouble x,
+ jdouble y, jdouble width, jdouble height, jdouble rotation, jint colorIndex, jint z,
+ jlong sourceNoteId, jlong createdAt, jlong updatedAt) {
+    auto* db = fromHandle(handle);
+    if (!db) return asCode(DbStatus::ErrorClosed);
+
+    const tien::core::BoardNote note{id,
+                                     boardId,
+                                     bytesToStd(env, jText),
+                                     x,
+                                     y,
+                                     width,
+                                     height,
+                                     rotation,
+                                     static_cast<int>(colorIndex),
+                                     static_cast<int>(z),
+                                     sourceNoteId,
+                                     createdAt,
+                                     updatedAt};
+    return db->restoreBoardNote(note);
+}
+
+TIEN_JNI(jlong, nativeInsertBoardLink)
+(JNIEnv*, jobject, jlong handle, jlong boardId, jlong fromNoteId, jlong toNoteId) {
+    auto* db = fromHandle(handle);
+    if (!db) return asCode(DbStatus::ErrorClosed);
+    return db->insertBoardLink(boardId, fromNoteId, toNoteId);
+}
+
+TIEN_JNI(jlong, nativeDeleteBoardLink)
+(JNIEnv*, jobject, jlong handle, jlong fromNoteId, jlong toNoteId) {
+    auto* db = fromHandle(handle);
+    if (!db) return asCode(DbStatus::ErrorClosed);
+    return db->deleteBoardLink(fromNoteId, toNoteId);
 }
 
 #undef TIEN_JNI

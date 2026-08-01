@@ -6,6 +6,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.tien.core.di.AppContainer
 import com.tien.core.ui.feature.agenda.AgendaViewModel
+import com.tien.core.ui.feature.board.BoardViewModel
 import com.tien.core.ui.feature.notes.NotesViewModel
 
 /**
@@ -34,6 +35,12 @@ object TienViewModelFactory {
                 clock = container.clock,
                 labels = container.dateTimeLabels
             )
+        }
+    }
+
+    fun board(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            BoardViewModel(boardRepository = container.boardRepository)
         }
     }
 

@@ -52,6 +52,50 @@ struct Task {
     bool        is_done;
 };
 
+// ── Board: papers pinned on a wall ──────────────────────────────────────────
+
+// One piece of paper on the board.
+//
+// Position, rotation and stacking order belong to the *paper*, not to the idea
+// written on it — the same text pinned twice is two papers, each with its own
+// spot on the wall.
+struct BoardNote {
+    int64_t     id;
+    int64_t     board_id;
+    std::string text;
+
+    // Board coordinates in density-independent pixels, of the note's top-left
+    // corner before rotation is applied.
+    double x;
+    double y;
+    double width;
+    double height;
+
+    // Degrees. Persisted, so a paper keeps the tilt it was pinned at.
+    double rotation;
+
+    int color_index;
+    int z;  // stacking order; higher is nearer the viewer
+
+    // 0 when the paper carries its own text rather than mirroring a note.
+    int64_t source_note_id;
+
+    int64_t created_at;
+    int64_t updated_at;
+};
+
+// The thread tying two papers together.
+struct BoardLink {
+    int64_t id;
+    int64_t board_id;
+    int64_t from_note_id;
+    int64_t to_note_id;
+    int64_t created_at;
+};
+
+// Sentinel for BoardNote::source_note_id when the paper is standalone.
+constexpr int64_t kNoSourceNote = 0;
+
 // ── Query contracts (mirrored by Kotlin enums) ──────────────────────────────
 
 // Ordering applied to the notes query. Pushed down to SQL — never sorted in

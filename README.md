@@ -4,10 +4,16 @@ Aplicación Android de productividad construida con **Jetpack Compose + Material
 
 ## Objetivo del proyecto
 
-Tien centraliza dos capacidades en una única experiencia:
+Tien centraliza tres capacidades en una única experiencia:
 
 - **Notas**: captura rápida, edición, fijado y búsqueda.
 - **Agenda**: tareas con plazo, prioridad y estado, agrupadas por día.
+- **Pizarra**: una pared infinita donde clavas ideas en papeles, las mueves con
+  la mano y las unes con hilo.
+
+Las tres responden a formas distintas de pensar: la lista sirve para *encontrar*,
+la agenda para *priorizar*, y la pared para *relacionar* — ver a la vez ideas que
+una lista obliga a recorrer en orden.
 
 ## Stack técnico
 
@@ -99,6 +105,52 @@ El esquema se versiona con `PRAGMA user_version` y las migraciones se aplican en
 una única transacción. Son **append-only**: nunca se edita una migración ya
 publicada.
 
+### La pizarra: por qué se siente física
+
+El objetivo no era una superficie con tarjetas, sino que el estudiante sienta que
+está clavando papeles en una pared. Los detalles que lo consiguen:
+
+| Detalle | Por qué |
+|---|---|
+| **La inclinación se persiste** | Un papel que se re-inclina en cada redibujado es inconfundiblemente digital. Se sortea al clavarlo y se guarda en la BD: queda torcido como lo dejaste |
+| **Se levanta antes de moverse** | Al agarrarlo crece un poco, se *endereza* hacia la horizontal (uno cuadra la hoja al cogerla) y su sombra se agranda. La sombra es lo que vende la altura |
+| **Se asienta al soltarse** | La inclinación sobrepasa y vuelve con un muelle, como una hoja meciéndose sobre su chincheta |
+| **Tiene grosor** | Una franja más oscura en el borde inferior y un brillo especular en la chincheta convierten un rectángulo en un objeto |
+| **El hilo cuelga** | Una recta entre dos notas es la arista de un grafo. Una curva con caída es cuerda con peso. Y proyecta sombra sobre el corcho |
+| **Háptica** | Vibra al levantar el papel y al soltarlo, en momentos que el usuario ha causado |
+| **Se levanta al frente** | Cogerlo lo sube en el orden de apilado, como al sacar una hoja de un montón |
+| **La pared se mueve** | El corcho se desplaza con la cámara. Si se quedara quieto sería una lista con imagen de fondo |
+
+**Gestos** — deliberadamente los de una mano frente a un tablón real:
+
+| Gesto | Acción |
+|---|---|
+| Arrastrar en cualquier sitio | Recorrer la pared |
+| Pellizcar | Acercarse o alejarse |
+| **Mantener pulsado** y arrastrar | Coger un papel y moverlo |
+| Tocar un papel | Seleccionarlo |
+| Tocar dos veces la pared | Clavar un papel ahí |
+
+Coger algo es una decisión, así que exige una pulsación deliberada. Como el
+arrastre simple *no* lo consume el papel, ese gesto cae hasta la pared y
+desplaza la vista — por eso sigue funcionando aunque el dedo caiga sobre una nota.
+
+### Rendimiento de la pizarra
+
+Tres decisiones sostienen la fluidez con muchos papeles:
+
+1. **Una sola capa GPU.** Desplazar y hacer zoom es una transformación sobre un
+   único `graphicsLayer`, no un *relayout* de cada papel.
+2. **Lambdas, no valores.** `offset { }` y `graphicsLayer { }` difieren la
+   lectura a las fases de *layout* y *draw*. Con la forma de valor, cada frame de
+   cada arrastre recompondría el composable entero.
+3. **Culling con `derivedStateOf`.** El filtro se re-ejecuta con la cámara, pero
+   solo recompone cuando el *resultado* cambia — es decir, cuando un papel entra
+   o sale de pantalla.
+
+El arrastre nunca pasa por el ViewModel: la posición viva es estado local del
+composable, y solo el punto de reposo llega a la base de datos.
+
 ### Sistema de diseño
 
 La firma visual es el **riel de urgencia**: una barra en el borde de cada tarea
@@ -109,6 +161,11 @@ significado — una tarea vencida lleva además etiqueta y texto.
 Los tonos cálidos (ocre, arcilla) están **reservados** para la urgencia; el resto
 de la interfaz es fría (pino, papel). Un píxel cálido en pantalla siempre
 significa «esto tiene plazo».
+
+La pizarra es la única excepción, y es coherente: ahí el elemento cálido es la
+*pared* — el corcho es marrón, y una pared no tiene plazo — mientras los papeles
+quedan desaturados. En un papel el color dice qué hoja cogiste, nunca cuánto
+urge, así que esa escala no toma prestado ningún tono de urgencia.
 
 ## Estructura del proyecto
 
@@ -121,7 +178,7 @@ app/src/main/
     di/              AppContainer             — grafo de objetos
     ui/
       designsystem/  theme/ · component/
-      feature/       notes/ · agenda/ · settings/
+      feature/       notes/ · agenda/ · board/ · settings/
       navigation/
   cpp/
     core/Models.h
@@ -131,10 +188,26 @@ app/src/main/
     sqlite3/
 ```
 
-## Esquema de datos (v2)
+## Esquema de datos (v3)
 
 ```mermaid
 erDiagram
+    BOARD_NOTES {
+        INTEGER id PK
+        INTEGER board_id FK
+        TEXT text
+        REAL x
+        REAL y
+        REAL rotation
+        INTEGER color_index
+        INTEGER z
+    }
+    BOARD_LINKS {
+        INTEGER id PK
+        INTEGER from_note_id FK
+        INTEGER to_note_id FK
+    }
+    BOARD_NOTES ||--o{ BOARD_LINKS : "hilo"
     NOTES {
         INTEGER id PK
         TEXT title
@@ -168,6 +241,9 @@ Todas las funciones reciben el `handle` como primer argumento.
 | `nativeRestoreNote` / `nativeRestoreTask` | `id` restaurado (conserva identidad) |
 | `nativeQueryNotes` / `nativeQueryTasks` | sobre JSON en UTF-8 |
 | `nativeFindNote` / `nativeFindTask` | sobre JSON con 0 o 1 elemento |
+| `nativeQueryBoardNotes` / `nativeQueryBoardLinks` | sobre JSON en UTF-8 |
+| `nativeUpdateBoardNoteTransform` | filas afectadas — se llama **una vez por soltar**, nunca por frame |
+| `nativeInsertBoardLink` | `id` del hilo, o `0` si ese par ya estaba unido |
 
 ## Herramientas de calidad
 
@@ -244,6 +320,9 @@ interfaces.
 ## Evolución recomendada
 
 1. Recordatorios del sistema con `AlarmManager` / `WorkManager`.
+0. Clavar en la pizarra una nota existente (`board_notes.source_note_id` ya está
+   en el esquema, sin UI todavía) y soportar varias pizarras (`boards` ya lo
+   permite; hoy se usa una sola).
 2. Separar `domain` y `data` en módulos Gradle propios (los límites de paquete ya
    lo permiten sin tocar los sitios de llamada).
 3. Búsqueda de texto completo con FTS5 — ya está compilado en la amalgamación.

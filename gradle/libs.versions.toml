@@ -14,6 +14,9 @@ datastore = "1.1.1"
 coroutines = "1.9.0"
 turbine = "1.2.0"
 desugarJdkLibs = "2.1.3"
+# 4.x rather than 5.x: 5.x raises the Android floor above this project's minSdk 24.
+okhttp = "4.12.0"
+jsoup = "1.18.1"
 # 1.23.8 is the last 1.x line, built against Kotlin 2.0.21 — the exact compiler
 # this project uses. The 2.0 alphas target Kotlin 2.4 and would mismatch.
 detekt = "1.23.8"
@@ -25,6 +28,12 @@ leakcanary = "2.14"
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+
+# ── Módulo :dutic — cliente del aula virtual ─────────────────────────────────
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver", version.ref = "okhttp" }
+# Moodle renders grades and profiles as HTML only; Jsoup is what reads them.
+jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 
 # Backports java.time (and friends) to the minSdk 24 floor.
 desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugarJdkLibs" }
@@ -75,6 +84,7 @@ leakcanary-android = { group = "com.squareup.leakcanary", name = "leakcanary-and
 
 [plugins]
 android-application  = { id = "com.android.application", version.ref = "agp" }
+android-library      = { id = "com.android.library", version.ref = "agp" }
 kotlin-android       = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 compose-compiler     = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 detekt               = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }

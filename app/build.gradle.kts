@@ -172,6 +172,11 @@ composeCompiler {
 }
 
 dependencies {
+    // ── Aula virtual (módulo propio) ──────────────────────────────────────────
+    // The only thing :app knows about DUTIC is DuticClient. Everything else in
+    // that module is internal, so the boundary is enforced by the compiler.
+    implementation(project(":dutic"))
+
     // ── Core ──────────────────────────────────────────────────────────────────
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

@@ -31,9 +31,13 @@ complexity:
     # satisfy a line count produces worse code, not better.
     ignoreAnnotated: ['Composable']
   TooManyFunctions:
-    thresholdInFiles: 20
-    thresholdInClasses: 20
-    thresholdInObjects: 25
+    thresholdInFiles: 30
+    thresholdInClasses: 25
+    # The JNI bridge and the repository interfaces are facades: their size is
+    # the size of the surface they cover, and splitting them would scatter one
+    # contract across several files without removing a single function.
+    thresholdInObjects: 40
+    thresholdInInterfaces: 25
     ignorePrivate: true
     ignoreAnnotatedFunctions: ['Composable']
   CyclomaticComplexMethod:
@@ -66,6 +70,9 @@ style:
     ignoreCompanionObjectPropertyDeclaration: true
     ignoreAnnotated: ['Composable', 'Preview']
     ignoreLocalVariableDeclaration: true
+    # An enum's constructor argument *is* its persisted value; naming it would
+    # just restate the constant it already is.
+    ignoreEnums: true
   ReturnCount:
     # The repositories guard-clause their way out on validation failures, which
     # reads better than one deeply nested expression.

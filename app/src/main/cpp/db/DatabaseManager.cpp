@@ -113,6 +113,16 @@ bool Stmt::bindInt(int idx, int val) {
     return bindInt64(idx, static_cast<int64_t>(val));
 }
 
+bool Stmt::bindDouble(int idx, double val) {
+    if (!stmt_) return false;
+    int rc = sqlite3_bind_double(stmt_, idx, val);
+    if (rc != SQLITE_OK) {
+        utils::e("Stmt::bindDouble — error %d on index %d", rc, idx);
+        return false;
+    }
+    return true;
+}
+
 int Stmt::step() {
     if (!stmt_) return SQLITE_ERROR;
     return sqlite3_step(stmt_);
@@ -135,6 +145,10 @@ int Stmt::columnInt(int col) const {
 
 bool Stmt::columnBool(int col) const {
     return columnInt64(col) != 0;
+}
+
+double Stmt::columnDouble(int col) const {
+    return stmt_ ? sqlite3_column_double(stmt_, col) : 0.0;
 }
 
 std::string Stmt::columnText(int col) const {
@@ -668,6 +682,276 @@ std::optional<core::Task> DatabaseManager::findTask(int64_t id) {
     return core::Task{stmt->columnInt64(0), stmt->columnText(1),  stmt->columnText(2),
                       stmt->columnInt64(3), stmt->columnInt64(4), stmt->columnInt64(5),
                       stmt->columnInt(6),   stmt->columnBool(7)};
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Board — papers pinned on a wall
+// ═══════════════════════════════════════════════════════════════════════════
+
+namespace {
+
+// Column order shared by every board_notes SELECT below, so the readers stay in
+// step with the queries.
+constexpr const char* kBoardNoteColumns =
+    "id, board_id, text, x, y, width, height, rotation, color_index, z, "
+    "source_note_id, created_at, updated_at";
+
+core::BoardNote readBoardNote(const Stmt& stmt) {
+    return core::BoardNote{stmt.columnInt64(0),  stmt.columnInt64(1),  stmt.columnText(2),
+                           stmt.columnDouble(3), stmt.columnDouble(4), stmt.columnDouble(5),
+                           stmt.columnDouble(6), stmt.columnDouble(7), stmt.columnInt(8),
+                           stmt.columnInt(9),    stmt.columnInt64(10), stmt.columnInt64(11),
+                           stmt.columnInt64(12)};
+}
+
+}  // namespace
+
+std::vector<core::BoardNote> DatabaseManager::queryBoardNotes(int64_t boardId) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!db_ || boardId <= 0) return {};
+
+    // Ordered back-to-front: the renderer draws straight down this list, so the
+    // last paper written is the one on top.
+    const std::string sql = std::string("SELECT ") + kBoardNoteColumns +
+                            " FROM board_notes WHERE board_id = ? ORDER BY z ASC, id ASC";
+
+    auto stmt = Stmt::prepare(db_, sql);
+    if (!stmt || !stmt->bindInt64(1, boardId)) return {};
+
+    std::vector<core::BoardNote> notes;
+    notes.reserve(32);
+    while (stmt->step() == SQLITE_ROW) {
+        notes.push_back(readBoardNote(*stmt));
+    }
+    return notes;
+}
+
+std::vector<core::BoardLink> DatabaseManager::queryBoardLinks(int64_t boardId) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!db_ || boardId <= 0) return {};
+
+    auto stmt = Stmt::prepare(db_,
+                              "SELECT id, board_id, from_note_id, to_note_id, created_at "
+                              "FROM board_links WHERE board_id = ? ORDER BY id ASC");
+    if (!stmt || !stmt->bindInt64(1, boardId)) return {};
+
+    std::vector<core::BoardLink> links;
+    while (stmt->step() == SQLITE_ROW) {
+        links.push_back(core::BoardLink{stmt->columnInt64(0), stmt->columnInt64(1),
+                                        stmt->columnInt64(2), stmt->columnInt64(3),
+                                        stmt->columnInt64(4)});
+    }
+    return links;
+}
+
+int64_t DatabaseManager::insertBoardNote(int64_t boardId, const std::string& text, double x,
+                                         double y, double rotation, int colorIndex,
+                                         int64_t sourceNoteId) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!db_) return asCode(DbStatus::ErrorClosed);
+    if (boardId <= 0) return asCode(DbStatus::ErrorInvalid);
+
+    // z = max + 1 in the same statement, so a new paper lands on top without a
+    // second round trip to read the current maximum.
+    auto stmt = Stmt::prepare(
+        db_,
+        "INSERT INTO board_notes "
+        "(board_id, text, x, y, rotation, color_index, z, source_note_id, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, "
+        "  (SELECT COALESCE(MAX(z), 0) + 1 FROM board_notes WHERE board_id = ?), "
+        "  NULLIF(?, 0), ?, ?)");
+    if (!stmt) return asCode(DbStatus::ErrorGeneric);
+
+    const int64_t now = nowEpochSeconds();
+    if (!stmt->bindInt64(1, boardId) || !stmt->bindText(2, text) || !stmt->bindDouble(3, x) ||
+        !stmt->bindDouble(4, y) || !stmt->bindDouble(5, rotation) ||
+        !stmt->bindInt(6, colorIndex) || !stmt->bindInt64(7, boardId) ||
+        !stmt->bindInt64(8, sourceNoteId) || !stmt->bindInt64(9, now) ||
+        !stmt->bindInt64(10, now)) {
+        return asCode(DbStatus::ErrorGeneric);
+    }
+
+    if (stmt->step() != SQLITE_DONE) {
+        utils::e("insertBoardNote — %s", sqlite3_errmsg(db_));
+        return asCode(DbStatus::ErrorGeneric);
+    }
+    return sqlite3_last_insert_rowid(db_);
+}
+
+int64_t DatabaseManager::updateBoardNoteText(int64_t id, const std::string& text) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!db_) return asCode(DbStatus::ErrorClosed);
+    if (id <= 0) return asCode(DbStatus::ErrorInvalid);
+
+    auto stmt = Stmt::prepare(db_, "UPDATE board_notes SET text = ?, updated_at = ? WHERE id = ?");
+    if (!stmt) return asCode(DbStatus::ErrorGeneric);
+    if (!stmt->bindText(1, text) || !stmt->bindInt64(2, nowEpochSeconds()) ||
+        !stmt->bindInt64(3, id)) {
+        return asCode(DbStatus::ErrorGeneric);
+    }
+    return runMutationLocked("updateBoardNoteText", *stmt);
+}
+
+int64_t DatabaseManager::updateBoardNoteTransform(int64_t id, double x, double y, double rotation) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!db_) return asCode(DbStatus::ErrorClosed);
+    if (id <= 0) return asCode(DbStatus::ErrorInvalid);
+
+    auto stmt = Stmt::prepare(
+        db_, "UPDATE board_notes SET x = ?, y = ?, rotation = ?, updated_at = ? WHERE id = ?");
+    if (!stmt) return asCode(DbStatus::ErrorGeneric);
+    if (!stmt->bindDouble(1, x) || !stmt->bindDouble(2, y) || !stmt->bindDouble(3, rotation) ||
+        !stmt->bindInt64(4, nowEpochSeconds()) || !stmt->bindInt64(5, id)) {
+        return asCode(DbStatus::ErrorGeneric);
+    }
+    return runMutationLocked("updateBoardNoteTransform", *stmt);
+}
+
+int64_t DatabaseManager::updateBoardNoteSize(int64_t id, double width, double height) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!db_) return asCode(DbStatus::ErrorClosed);
+    if (id <= 0 || width <= 0 || height <= 0) return asCode(DbStatus::ErrorInvalid);
+
+    auto stmt = Stmt::prepare(
+        db_, "UPDATE board_notes SET width = ?, height = ?, updated_at = ? WHERE id = ?");
+    if (!stmt) return asCode(DbStatus::ErrorGeneric);
+    if (!stmt->bindDouble(1, width) || !stmt->bindDouble(2, height) ||
+        !stmt->bindInt64(3, nowEpochSeconds()) || !stmt->bindInt64(4, id)) {
+        return asCode(DbStatus::ErrorGeneric);
+    }
+    return runMutationLocked("updateBoardNoteSize", *stmt);
+}
+
+int64_t DatabaseManager::updateBoardNoteColor(int64_t id, int colorIndex) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!db_) return asCode(DbStatus::ErrorClosed);
+    if (id <= 0) return asCode(DbStatus::ErrorInvalid);
+
+    auto stmt =
+        Stmt::prepare(db_, "UPDATE board_notes SET color_index = ?, updated_at = ? WHERE id = ?");
+    if (!stmt) return asCode(DbStatus::ErrorGeneric);
+    if (!stmt->bindInt(1, colorIndex) || !stmt->bindInt64(2, nowEpochSeconds()) ||
+        !stmt->bindInt64(3, id)) {
+        return asCode(DbStatus::ErrorGeneric);
+    }
+    return runMutationLocked("updateBoardNoteColor", *stmt);
+}
+
+int64_t DatabaseManager::raiseBoardNote(int64_t id) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!db_) return asCode(DbStatus::ErrorClosed);
+    if (id <= 0) return asCode(DbStatus::ErrorInvalid);
+
+    // Only rewrites z when the paper is not already on top, so repeatedly
+    // tapping the same note does not churn the row.
+    auto stmt = Stmt::prepare(db_,
+                              "UPDATE board_notes SET z = "
+                              "  (SELECT COALESCE(MAX(z), 0) + 1 FROM board_notes b WHERE "
+                              "b.board_id = board_notes.board_id) "
+                              "WHERE id = ? AND z < "
+                              "  (SELECT COALESCE(MAX(z), 0) FROM board_notes b WHERE b.board_id = "
+                              "board_notes.board_id)");
+    if (!stmt || !stmt->bindInt64(1, id)) return asCode(DbStatus::ErrorGeneric);
+
+    if (stmt->step() != SQLITE_DONE) {
+        utils::e("raiseBoardNote — %s", sqlite3_errmsg(db_));
+        return asCode(DbStatus::ErrorGeneric);
+    }
+    // Zero rows means it was already on top — success, not "not found".
+    return sqlite3_changes(db_);
+}
+
+int64_t DatabaseManager::deleteBoardNote(int64_t id) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!db_) return asCode(DbStatus::ErrorClosed);
+    if (id <= 0) return asCode(DbStatus::ErrorInvalid);
+
+    // Threads tied to this paper go with it, via ON DELETE CASCADE — which only
+    // works because applyPragmas() turns foreign_keys on.
+    auto stmt = Stmt::prepare(db_, "DELETE FROM board_notes WHERE id = ?");
+    if (!stmt || !stmt->bindInt64(1, id)) return asCode(DbStatus::ErrorGeneric);
+
+    return runMutationLocked("deleteBoardNote", *stmt);
+}
+
+int64_t DatabaseManager::restoreBoardNote(const core::BoardNote& note) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!db_) return asCode(DbStatus::ErrorClosed);
+    if (note.id <= 0 || note.board_id <= 0) return asCode(DbStatus::ErrorInvalid);
+
+    auto stmt = Stmt::prepare(db_,
+                              "INSERT INTO board_notes "
+                              "(id, board_id, text, x, y, width, height, rotation, color_index, z, "
+                              " source_note_id, created_at, updated_at) "
+                              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, 0), ?, ?)");
+    if (!stmt) return asCode(DbStatus::ErrorGeneric);
+
+    if (!stmt->bindInt64(1, note.id) || !stmt->bindInt64(2, note.board_id) ||
+        !stmt->bindText(3, note.text) || !stmt->bindDouble(4, note.x) ||
+        !stmt->bindDouble(5, note.y) || !stmt->bindDouble(6, note.width) ||
+        !stmt->bindDouble(7, note.height) || !stmt->bindDouble(8, note.rotation) ||
+        !stmt->bindInt(9, note.color_index) || !stmt->bindInt(10, note.z) ||
+        !stmt->bindInt64(11, note.source_note_id) || !stmt->bindInt64(12, note.created_at) ||
+        !stmt->bindInt64(13, note.updated_at)) {
+        return asCode(DbStatus::ErrorGeneric);
+    }
+
+    const int rc = stmt->step();
+    if (rc != SQLITE_DONE) {
+        if (rc == SQLITE_CONSTRAINT) return asCode(DbStatus::ErrorConflict);
+        utils::e("restoreBoardNote — %s", sqlite3_errmsg(db_));
+        return asCode(DbStatus::ErrorGeneric);
+    }
+    return note.id;
+}
+
+int64_t DatabaseManager::insertBoardLink(int64_t boardId, int64_t fromNoteId, int64_t toNoteId) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!db_) return asCode(DbStatus::ErrorClosed);
+    if (boardId <= 0 || fromNoteId <= 0 || toNoteId <= 0 || fromNoteId == toNoteId) {
+        return asCode(DbStatus::ErrorInvalid);
+    }
+
+    // A thread is undirected, so (a,b) and (b,a) are the same thread. Storing
+    // the pair in a canonical order lets the UNIQUE index reject the duplicate
+    // instead of drawing a second curve over the first.
+    const int64_t lo = fromNoteId < toNoteId ? fromNoteId : toNoteId;
+    const int64_t hi = fromNoteId < toNoteId ? toNoteId : fromNoteId;
+
+    auto stmt = Stmt::prepare(db_,
+                              "INSERT OR IGNORE INTO board_links "
+                              "(board_id, from_note_id, to_note_id, created_at) "
+                              "VALUES (?, ?, ?, ?)");
+    if (!stmt) return asCode(DbStatus::ErrorGeneric);
+
+    if (!stmt->bindInt64(1, boardId) || !stmt->bindInt64(2, lo) || !stmt->bindInt64(3, hi) ||
+        !stmt->bindInt64(4, nowEpochSeconds())) {
+        return asCode(DbStatus::ErrorGeneric);
+    }
+
+    if (stmt->step() != SQLITE_DONE) {
+        utils::e("insertBoardLink — %s", sqlite3_errmsg(db_));
+        return asCode(DbStatus::ErrorGeneric);
+    }
+    // OR IGNORE means zero changes when the thread already exists. Tying two
+    // papers that are already tied is a no-op, not a failure.
+    return sqlite3_changes(db_) > 0 ? sqlite3_last_insert_rowid(db_) : 0;
+}
+
+int64_t DatabaseManager::deleteBoardLink(int64_t fromNoteId, int64_t toNoteId) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!db_) return asCode(DbStatus::ErrorClosed);
+    if (fromNoteId <= 0 || toNoteId <= 0) return asCode(DbStatus::ErrorInvalid);
+
+    const int64_t lo = fromNoteId < toNoteId ? fromNoteId : toNoteId;
+    const int64_t hi = fromNoteId < toNoteId ? toNoteId : fromNoteId;
+
+    auto stmt =
+        Stmt::prepare(db_, "DELETE FROM board_links WHERE from_note_id = ? AND to_note_id = ?");
+    if (!stmt || !stmt->bindInt64(1, lo) || !stmt->bindInt64(2, hi)) {
+        return asCode(DbStatus::ErrorGeneric);
+    }
+    return runMutationLocked("deleteBoardLink", *stmt);
 }
 
 }  // namespace tien::db

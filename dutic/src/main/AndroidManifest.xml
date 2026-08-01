@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- The aula virtual is reached over the network; the login WebView needs
+         the same permission. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Merged into the consuming app. Scoped to one host — see the config. -->
+    <application
+        android:networkSecurityConfig="@xml/dutic_network_security_config" />
+
+</manifest>

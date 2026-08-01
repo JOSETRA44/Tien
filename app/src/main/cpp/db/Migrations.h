@@ -94,9 +94,85 @@ constexpr const char* kMigration_002 = R"SQL(
         ON tasks (is_done, due_at);
 )SQL";
 
+// ── v3 — the board: papers pinned on a wall ────────────────────────────────
+// A board is an unbounded 2D surface. Each note carries its own position,
+// rotation and stacking order, because those are properties of *this* piece of
+// paper on *this* wall, not of the idea written on it.
+//
+// `rotation` is persisted rather than randomised at render time: a paper that
+// re-tilts itself every time the screen redraws is unmistakably digital. Pinned
+// once, it stays where it was put.
+constexpr const char* kMigration_003 = R"SQL(
+    CREATE TABLE IF NOT EXISTS boards (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        name        TEXT    NOT NULL,
+        created_at  INTEGER NOT NULL,
+        updated_at  INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS board_notes (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        board_id    INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+        text        TEXT    NOT NULL DEFAULT '',
+
+        -- Board coordinates, in density-independent pixels. REAL rather than
+        -- INTEGER so a paper keeps its exact spot across zoom levels instead of
+        -- snapping to a whole pixel every time it is dragged.
+        x           REAL    NOT NULL DEFAULT 0,
+        y           REAL    NOT NULL DEFAULT 0,
+        width       REAL    NOT NULL DEFAULT 180,
+        height      REAL    NOT NULL DEFAULT 180,
+
+        -- Degrees. Small and persisted: this is the tilt it was pinned at.
+        rotation    REAL    NOT NULL DEFAULT 0,
+
+        color_index INTEGER NOT NULL DEFAULT 0,
+
+        -- Stacking order. Picking a paper up raises it, like lifting one off a
+        -- pile, so the most recently touched note is never buried.
+        z           INTEGER NOT NULL DEFAULT 0,
+
+        -- Optional link back to a note in the notes table, so an existing note
+        -- can be pinned to the wall without duplicating its text.
+        source_note_id INTEGER REFERENCES notes(id) ON DELETE SET NULL,
+
+        created_at  INTEGER NOT NULL,
+        updated_at  INTEGER NOT NULL
+    );
+
+    -- The thread between two papers. Undirected in meaning, but stored with a
+    -- from/to pair so the renderer has a stable order to draw the curve in.
+    CREATE TABLE IF NOT EXISTS board_links (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        board_id     INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+        from_note_id INTEGER NOT NULL REFERENCES board_notes(id) ON DELETE CASCADE,
+        to_note_id   INTEGER NOT NULL REFERENCES board_notes(id) ON DELETE CASCADE,
+        created_at   INTEGER NOT NULL,
+
+        -- A thread from a paper to itself is meaningless, and pinning the same
+        -- pair twice would just draw the same curve on top of itself.
+        CHECK (from_note_id <> to_note_id),
+        UNIQUE (from_note_id, to_note_id)
+    );
+
+    -- Every query is "give me this board's contents", so board_id leads.
+    CREATE INDEX IF NOT EXISTS idx_board_notes_board ON board_notes (board_id, z);
+    CREATE INDEX IF NOT EXISTS idx_board_links_board ON board_links (board_id);
+    CREATE INDEX IF NOT EXISTS idx_board_links_from  ON board_links (from_note_id);
+    CREATE INDEX IF NOT EXISTS idx_board_links_to    ON board_links (to_note_id);
+
+    -- The app always has somewhere to pin things. Without this the first launch
+    -- would open an empty screen with no board to put anything on.
+    INSERT INTO boards (id, name, created_at, updated_at)
+        SELECT 1, 'Mi pizarra',
+               CAST(strftime('%s','now') AS INTEGER),
+               CAST(strftime('%s','now') AS INTEGER)
+        WHERE NOT EXISTS (SELECT 1 FROM boards WHERE id = 1);
+)SQL";
+
 // Append-only registry. Index i holds the migration that takes the schema
 // from version i to version i+1.
-constexpr std::array<const char*, 2> kMigrations{kMigration_001, kMigration_002};
+constexpr std::array<const char*, 3> kMigrations{kMigration_001, kMigration_002, kMigration_003};
 
 // Current schema version — must equal kMigrations.size().
 constexpr int kSchemaVersion = static_cast<int>(kMigrations.size());

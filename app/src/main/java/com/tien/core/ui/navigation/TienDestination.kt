@@ -2,8 +2,10 @@ package com.tien.core.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -41,8 +43,17 @@ sealed class TienDestination(
         createLabel = "Nueva tarea"
     )
 
+    /** The wall: ideas on paper, arranged in space rather than in a list. */
+    data object Board : TienDestination(
+        route = "board",
+        label = "Pizarra",
+        selectedIcon = Icons.Filled.PushPin,
+        unselectedIcon = Icons.Outlined.PushPin,
+        createLabel = "Clavar idea"
+    )
+
     companion object {
-        val bottomBarItems = listOf(Notes, Agenda)
+        val bottomBarItems = listOf(Notes, Agenda, Board)
 
         val startRoute: String = Notes.route
 

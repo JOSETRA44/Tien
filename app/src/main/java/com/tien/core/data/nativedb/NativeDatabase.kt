@@ -126,6 +126,80 @@ internal object NativeDatabase {
 
     /** Single-row lookup by primary key. See [nativeFindNote]. */
     external fun nativeFindTask(handle: Long, id: Long): ByteArray?
+
+    // ── Board ─────────────────────────────────────────────────────────────────
+    // Coordinates cross as `double`. Kotlin works in Float, but SQLite stores
+    // REAL as a double, and narrowing at the boundary would quietly round a
+    // paper's position on every save.
+
+    external fun nativeQueryBoardNotes(handle: Long, boardId: Long): ByteArray?
+
+    external fun nativeQueryBoardLinks(handle: Long, boardId: Long): ByteArray?
+
+    // Eight columns because pinning a paper sets eight columns. JNI cannot read
+    // a Kotlin object from C++ without reflection, so primitives it is.
+    @Suppress("LongParameterList")
+    external fun nativeInsertBoardNote(
+        handle: Long,
+        boardId: Long,
+        text: ByteArray,
+        x: Double,
+        y: Double,
+        rotation: Double,
+        colorIndex: Int,
+        sourceNoteId: Long
+    ): Long
+
+    external fun nativeUpdateBoardNoteText(handle: Long, id: Long, text: ByteArray): Long
+
+    /** Position and tilt only — the hot path, called once per drop. */
+    external fun nativeUpdateBoardNoteTransform(
+        handle: Long,
+        id: Long,
+        x: Double,
+        y: Double,
+        rotation: Double
+    ): Long
+
+    external fun nativeUpdateBoardNoteSize(
+        handle: Long,
+        id: Long,
+        width: Double,
+        height: Double
+    ): Long
+
+    external fun nativeUpdateBoardNoteColor(handle: Long, id: Long, colorIndex: Int): Long
+
+    external fun nativeRaiseBoardNote(handle: Long, id: Long): Long
+
+    external fun nativeDeleteBoardNote(handle: Long, id: Long): Long
+
+    @Suppress("LongParameterList")
+    external fun nativeRestoreBoardNote(
+        handle: Long,
+        id: Long,
+        boardId: Long,
+        text: ByteArray,
+        x: Double,
+        y: Double,
+        width: Double,
+        height: Double,
+        rotation: Double,
+        colorIndex: Int,
+        z: Int,
+        sourceNoteId: Long,
+        createdAt: Long,
+        updatedAt: Long
+    ): Long
+
+    external fun nativeInsertBoardLink(
+        handle: Long,
+        boardId: Long,
+        fromNoteId: Long,
+        toNoteId: Long
+    ): Long
+
+    external fun nativeDeleteBoardLink(handle: Long, fromNoteId: Long, toNoteId: Long): Long
 }
 
 /**

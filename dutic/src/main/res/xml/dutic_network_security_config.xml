@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Network policy for the aula virtual, and nothing else.
+
+    The CLI disables TLS verification outright (`rejectUnauthorized: false`)
+    because Node's trust store lacks UNSA's CA. That is not carried over: on a
+    phone it would make every request forgeable on any Wi-Fi the device joins.
+
+    Android's trust store is as broad as Chrome's, so ordinary verification is
+    expected to work. This config exists only to scope one narrow allowance —
+    additionally trusting certificates the *user* installed — to this single
+    host. If the university uses a private CA the student has installed, the app
+    works; every other host keeps the strict default.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="false">aulavirtual.unsa.edu.pe</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </domain-config>
+
+    <!-- Everything else: system CAs only, no cleartext, no user-installed CAs. -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
