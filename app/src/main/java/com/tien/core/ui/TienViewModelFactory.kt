@@ -7,6 +7,9 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.tien.core.di.AppContainer
 import com.tien.core.ui.feature.agenda.AgendaViewModel
 import com.tien.core.ui.feature.board.BoardViewModel
+import com.tien.core.ui.feature.dutic.DuticCourseViewModel
+import com.tien.core.ui.feature.dutic.DuticPeopleViewModel
+import com.tien.core.ui.feature.dutic.DuticViewModel
 import com.tien.core.ui.feature.notes.NotesViewModel
 
 /**
@@ -41,6 +44,29 @@ object TienViewModelFactory {
     fun board(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
         initializer {
             BoardViewModel(boardRepository = container.boardRepository)
+        }
+    }
+
+    fun dutic(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            DuticViewModel(
+                client = container.duticClient,
+                clock = container.clock
+            )
+        }
+    }
+
+    /** Scoped to one course, so its id is a constructor argument. */
+    fun duticCourse(container: AppContainer, courseId: Long): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                DuticCourseViewModel(client = container.duticClient, courseId = courseId)
+            }
+        }
+
+    fun duticPeople(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            DuticPeopleViewModel(client = container.duticClient)
         }
     }
 

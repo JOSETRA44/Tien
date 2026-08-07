@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -340,9 +342,13 @@ private fun FilterRow(
     filter: TaskFilter,
     onFilterChange: (TaskFilter) -> Unit
 ) {
+    // Scrollable for the same reason as the day strip below it: "Completadas"
+    // plus "Pendientes" plus "Todas" stops fitting once the user raises the
+    // system font size, and a fixed Row clips rather than reflows.
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
             .padding(
                 horizontal = TienTheme.spacing.gutter,
                 vertical = TienTheme.spacing.snug

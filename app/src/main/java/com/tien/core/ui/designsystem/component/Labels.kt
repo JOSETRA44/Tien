@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.tien.core.domain.model.Priority
 import com.tien.core.ui.designsystem.theme.TienTextStyles
@@ -39,6 +40,12 @@ fun SectionEyebrow(
         text = text.uppercase(),
         style = TienTextStyles.eyebrow,
         color = color,
+        // An eyebrow is a label, and a label that wraps to three lines stops
+        // being one. Uppercase plus 1.4 tracking makes these strings far wider
+        // than they look in the source, so the guard is not theoretical: a long
+        // display name in the aula virtual header already reaches it.
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
         modifier = modifier
     )
 }
@@ -128,6 +135,11 @@ fun MetaText(
         text = text,
         style = TienTextStyles.meta,
         color = color,
+        // Metadata is secondary by definition; truncating it is the correct
+        // recovery, and it keeps a long course name from pushing a card's
+        // deadline off screen.
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
         modifier = modifier
     )
 }

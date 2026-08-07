@@ -36,8 +36,14 @@ internal val Graphite900 = Color(0xFF141714)
 internal val Graphite800 = Color(0xFF1D211E)
 internal val Graphite700 = Color(0xFF272C29)
 internal val Graphite500 = Color(0xFF4A514D)
-internal val Graphite400 = Color(0xFF6C7470)
-internal val Graphite300 = Color(0xFF9AA29E)
+
+// Dark-scheme `muted`. Was #6C7470: 3.76:1 on the dark background.
+internal val Graphite400 = Color(0xFF7B847F)
+
+// Graphite300 was #9AA29E, which is 2.5:1 on Paper — well under the 4.5:1 that
+// WCAG AA requires for text this size, and it is used for eyebrow labels. Its
+// hue and saturation are unchanged; only the lightness moved.
+internal val Graphite300 = Color(0xFF68706C)
 
 // ── Urgency: the warm half of the system ────────────────────────────────────
 // Used only for deadlines and priority. Nothing else in the app is allowed to
@@ -45,10 +51,15 @@ internal val Graphite300 = Color(0xFF9AA29E)
 internal val Clay600 = Color(0xFFA3402F) // overdue
 internal val Clay400 = Color(0xFFD9705C)
 internal val Clay100 = Color(0xFFFBE0DA)
-internal val Ochre600 = Color(0xFFB4690E) // due today
+
+// Was #B4690E: 4.05:1 on Paper and 3.62:1 on its own container. Both now clear
+// 4.5:1, which matters because this is the "vence hoy" colour.
+internal val Ochre600 = Color(0xFF9E5C0C) // due today
 internal val Ochre400 = Color(0xFFE8A33D)
 internal val Ochre100 = Color(0xFFFDEBD0)
-internal val Moss600 = Color(0xFF4C7A2E) // comfortably ahead
+
+// Was #4C7A2E: 4.26:1 against its own container.
+internal val Moss600 = Color(0xFF49762C) // comfortably ahead
 internal val Moss400 = Color(0xFF7FAE5C)
 internal val Moss100 = Color(0xFFE3EFD8)
 

@@ -33,15 +33,26 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.tien.core.di.AppContainer
 import com.tien.core.ui.feature.agenda.AgendaScreen
 import com.tien.core.ui.feature.agenda.AgendaViewModel
 import com.tien.core.ui.feature.board.BoardScreen
 import com.tien.core.ui.feature.board.BoardViewModel
+import com.tien.core.ui.feature.dutic.DuticCourseScreen
+import com.tien.core.ui.feature.dutic.DuticCourseViewModel
+import com.tien.core.ui.feature.dutic.DuticPeopleScreen
+import com.tien.core.ui.feature.dutic.DuticPeopleViewModel
+import com.tien.core.ui.feature.dutic.DuticProfileScreen
+import com.tien.core.ui.feature.dutic.DuticRoute
+import com.tien.core.ui.feature.dutic.DuticScreen
+import com.tien.core.ui.feature.dutic.DuticViewModel
 import com.tien.core.ui.feature.notes.NotesScreen
 import com.tien.core.ui.feature.notes.NotesViewModel
 import com.tien.core.ui.feature.settings.SettingsSheet
@@ -83,8 +94,11 @@ fun TienApp(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
+            // Hidden on the aula virtual: assignments are published by
+            // teachers, so a create button there would be a control that lies
+            // about what it does.
             AnimatedVisibility(
-                visible = true,
+                visible = currentDestination.route in TienDestination.creatable,
                 enter = scaleIn() + fadeIn(),
                 exit = scaleOut() + fadeOut()
             ) {
@@ -181,6 +195,87 @@ fun TienApp(
                         showCreate = pendingCreateRoute == TienDestination.Board.route,
                         onCreateHandled = { pendingCreateRoute = null }
                     )
+                }
+
+                // A nested graph, not four sibling routes: the bottom bar
+                // matches on the graph's route, so "Aula" stays selected while
+                // the student is three screens deep inside a course.
+                navigation(
+                    route = TienDestination.Dutic.route,
+                    startDestination = DuticRoute.HOME
+                ) {
+                    composable(DuticRoute.HOME) {
+                        val viewModel: DuticViewModel = viewModel(
+                            factory = TienViewModelFactory.dutic(container)
+                        )
+                        DuticScreen(
+                            viewModel = viewModel,
+                            clock = container.clock,
+                            labels = container.dateTimeLabels,
+                            snackbarHostState = snackbarHostState,
+                            onOpenCourse = { navController.navigate(DuticRoute.course(it)) },
+                            onOpenPeopleSearch = { navController.navigate(DuticRoute.PEOPLE) }
+                        )
+                    }
+
+                    composable(
+                        route = DuticRoute.COURSE,
+                        arguments = listOf(
+                            navArgument(DuticRoute.ARG_COURSE_ID) { type = NavType.LongType }
+                        )
+                    ) { entry ->
+                        val courseId = entry.arguments?.getLong(DuticRoute.ARG_COURSE_ID) ?: 0L
+                        val viewModel: DuticCourseViewModel = viewModel(
+                            factory = TienViewModelFactory.duticCourse(container, courseId)
+                        )
+                        DuticCourseScreen(
+                            viewModel = viewModel,
+                            clock = container.clock,
+                            labels = container.dateTimeLabels,
+                            onBack = { navController.popBackStack() },
+                            onOpenPerson = { userId, course ->
+                                navController.navigate(DuticRoute.profile(userId, course))
+                            }
+                        )
+                    }
+
+                    composable(DuticRoute.PEOPLE) {
+                        val viewModel: DuticPeopleViewModel = viewModel(
+                            factory = TienViewModelFactory.duticPeople(container)
+                        )
+                        DuticPeopleScreen(
+                            viewModel = viewModel,
+                            onBack = { navController.popBackStack() },
+                            onOpenPerson = { userId, course ->
+                                navController.navigate(DuticRoute.profile(userId, course))
+                            }
+                        )
+                    }
+
+                    composable(
+                        route = DuticRoute.PROFILE,
+                        arguments = listOf(
+                            navArgument(DuticRoute.ARG_USER_ID) { type = NavType.LongType },
+                            navArgument(DuticRoute.ARG_COURSE_ID) {
+                                type = NavType.LongType
+                                defaultValue = 0L
+                            }
+                        )
+                    ) { entry ->
+                        val userId = entry.arguments?.getLong(DuticRoute.ARG_USER_ID) ?: 0L
+                        val courseId = entry.arguments
+                            ?.getLong(DuticRoute.ARG_COURSE_ID)
+                            ?.takeIf { it > 0L }
+                        val viewModel: DuticPeopleViewModel = viewModel(
+                            factory = TienViewModelFactory.duticPeople(container)
+                        )
+                        DuticProfileScreen(
+                            viewModel = viewModel,
+                            userId = userId,
+                            courseId = courseId,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
                 }
 
                 composable(TienDestination.Agenda.route) {

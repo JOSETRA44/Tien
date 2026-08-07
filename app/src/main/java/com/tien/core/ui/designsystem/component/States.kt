@@ -4,8 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -64,7 +66,7 @@ fun EmptyState(
             )
         }
 
-        Box(modifier = Modifier.padding(top = TienTheme.spacing.loose))
+        Spacer(Modifier.height(TienTheme.spacing.loose))
 
         Text(
             text = title,
@@ -73,7 +75,7 @@ fun EmptyState(
             textAlign = TextAlign.Center
         )
 
-        Box(modifier = Modifier.padding(top = TienTheme.spacing.snug))
+        Spacer(Modifier.height(TienTheme.spacing.snug))
 
         Text(
             text = body,
@@ -83,7 +85,7 @@ fun EmptyState(
         )
 
         if (actionLabel != null && onAction != null) {
-            Box(modifier = Modifier.padding(top = TienTheme.spacing.loose))
+            Spacer(Modifier.height(TienTheme.spacing.loose))
             Button(onClick = onAction) {
                 Text(actionLabel)
             }
@@ -118,7 +120,7 @@ fun ErrorState(
             textAlign = TextAlign.Center
         )
 
-        Box(modifier = Modifier.padding(top = TienTheme.spacing.snug))
+        Spacer(Modifier.height(TienTheme.spacing.snug))
 
         Text(
             text = body,
@@ -128,7 +130,7 @@ fun ErrorState(
         )
 
         if (onRetry != null) {
-            Box(modifier = Modifier.padding(top = TienTheme.spacing.comfy))
+            Spacer(Modifier.height(TienTheme.spacing.comfy))
             TextButton(onClick = onRetry) {
                 Text("Reintentar")
             }

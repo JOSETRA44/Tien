@@ -3,9 +3,11 @@ package com.tien.core.ui.navigation
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material.icons.outlined.School
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -52,8 +54,22 @@ sealed class TienDestination(
         createLabel = "Clavar idea"
     )
 
+    /** The UNSA aula virtual: real deadlines, from the university itself. */
+    data object Dutic : TienDestination(
+        route = "dutic",
+        label = "Aula",
+        selectedIcon = Icons.Filled.School,
+        unselectedIcon = Icons.Outlined.School,
+        // The aula virtual is read-only from here — assignments are published
+        // by teachers, so a "create" action would be a button that lies.
+        createLabel = "Nueva nota"
+    )
+
     companion object {
-        val bottomBarItems = listOf(Notes, Agenda, Board)
+        val bottomBarItems = listOf(Notes, Agenda, Board, Dutic)
+
+        /** Destinations where the create FAB means something. */
+        val creatable = setOf(Notes.route, Agenda.route, Board.route)
 
         val startRoute: String = Notes.route
 
