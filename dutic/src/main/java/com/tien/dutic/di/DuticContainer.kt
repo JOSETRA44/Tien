@@ -4,8 +4,10 @@ import android.content.Context
 import com.tien.dutic.DuticClient
 import com.tien.dutic.auth.DuticAuthenticator
 import com.tien.dutic.core.DataStoreSessionStore
+import com.tien.dutic.core.DataStoreRosterCache
 import com.tien.dutic.core.MoodleClient
 import com.tien.dutic.core.MoodleHttp
+import com.tien.dutic.core.RosterCache
 import com.tien.dutic.core.SessionStore
 import com.tien.dutic.core.TtlCache
 import com.tien.dutic.domain.repository.CoursesRepository
@@ -47,6 +49,13 @@ class DuticContainer(
      */
     private val cache by lazy { TtlCache() }
 
+    /**
+     * Survives restarts, unlike [cache]. A class roster changes once a semester,
+     * so re-fetching it on every launch spends the module's most expensive call
+     * on an answer that is almost never different.
+     */
+    private val rosterCache: RosterCache by lazy { DataStoreRosterCache(appContext) }
+
     private val authenticator by lazy { DuticAuthenticator(sessionStore) }
 
     private val coursesRepository by lazy { CoursesRepository(moodleClient, cache) }
@@ -58,7 +67,7 @@ class DuticContainer(
     }
 
     private val peopleRepository by lazy {
-        PeopleRepository(moodleClient, coursesRepository, cache)
+        PeopleRepository(moodleClient, coursesRepository, cache, rosterCache)
     }
 
     /** The module's single entry point. */

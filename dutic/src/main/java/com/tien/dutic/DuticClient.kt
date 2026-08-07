@@ -12,13 +12,13 @@ import com.tien.dutic.domain.model.CourseSection
 import com.tien.dutic.domain.model.DuticCourse
 import com.tien.dutic.domain.model.DuticTask
 import com.tien.dutic.domain.model.Participant
+import com.tien.dutic.domain.model.PersonMatch
 import com.tien.dutic.domain.model.PersonProfile
 import com.tien.dutic.domain.model.ResourceFile
 import com.tien.dutic.domain.repository.AssignmentDetail
 import com.tien.dutic.domain.repository.CoursesRepository
 import com.tien.dutic.domain.repository.GradesRepository
 import com.tien.dutic.domain.repository.PeopleRepository
-import com.tien.dutic.domain.repository.PersonMatch
 import com.tien.dutic.domain.repository.TasksRepository
 import kotlinx.coroutines.flow.Flow
 import org.jsoup.Jsoup
@@ -139,9 +139,18 @@ class DuticClient internal constructor(
 
     // ── People ──────────────────────────────────────────────────────────────
 
-    /** `dutic_list_participants` */
-    suspend fun participants(courseId: Long): DuticResult<List<Participant>> =
-        authenticator.withSession { people.participants(it, courseId) }
+    /**
+     * `dutic_list_participants`
+     *
+     * The roster is stored on disk for a week — see
+     * [com.tien.dutic.core.RosterCache] for why. Pass [forceRefresh] to skip it
+     * when the student knows someone has enrolled since.
+     */
+    suspend fun participants(
+        courseId: Long,
+        forceRefresh: Boolean = false
+    ): DuticResult<List<Participant>> =
+        authenticator.withSession { people.participants(it, courseId, forceRefresh) }
 
     /** `dutic_get_course_teachers` */
     suspend fun teachers(courseId: Long): DuticResult<List<Participant>> =
