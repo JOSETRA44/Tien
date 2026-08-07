@@ -4,16 +4,19 @@ Aplicación Android de productividad construida con **Jetpack Compose + Material
 
 ## Objetivo del proyecto
 
-Tien centraliza tres capacidades en una única experiencia:
+Tien centraliza cuatro capacidades en una única experiencia:
 
 - **Notas**: captura rápida, edición, fijado y búsqueda.
 - **Agenda**: tareas con plazo, prioridad y estado, agrupadas por día.
 - **Pizarra**: una pared infinita donde clavas ideas en papeles, las mueves con
   la mano y las unes con hilo.
+- **Aula virtual**: tus entregas reales de la UNSA, incluidas las que el
+  calendario de Moodle no te muestra.
 
-Las tres responden a formas distintas de pensar: la lista sirve para *encontrar*,
-la agenda para *priorizar*, y la pared para *relacionar* — ver a la vez ideas que
-una lista obliga a recorrer en orden.
+Cada una responde a una forma distinta de pensar: la lista sirve para
+*encontrar*, la agenda para *priorizar*, la pared para *relacionar* — ver a la
+vez ideas que una lista obliga a recorrer en orden — y el aula virtual para
+*no perder una entrega*.
 
 ## Stack técnico
 
@@ -27,6 +30,7 @@ una lista obliga a recorrer en orden.
 | Bridge | JNI con handle persistente |
 | Build Android | AGP 8.13.2, Kotlin 2.0.21, JDK 17 |
 | Build nativo | CMake 3.22 |
+| Aula virtual | OkHttp + Jsoup (módulo `:dutic`) |
 
 ## Arquitectura
 
@@ -151,6 +155,98 @@ Tres decisiones sostienen la fluidez con muchos papeles:
 El arrastre nunca pasa por el ViewModel: la posición viva es estado local del
 composable, y solo el punto de reposo llega a la base de datos.
 
+### El aula virtual: por qué existe el módulo `:dutic`
+
+El calendario de Moodle devuelve solo eventos **accionables** — futuros y sin
+entregar. Una tarea ya vencida, o sin fecha, **desaparece de la vista**. Así se
+pierden entregas.
+
+`:dutic` es un módulo Gradle propio (no un paquete dentro de `:app`), portado
+desde el MCP/CLI `dutic`. El límite lo hace cumplir el compilador: todo su
+interior es `internal` y lo único que `:app` puede tocar es la fachada
+`DuticClient`.
+
+| MCP (Node) | `:dutic` (Android) |
+|---|---|
+| Playwright + SSO de Google | WebView que captura la cookie y el `sesskey` |
+| undici + `rejectUnauthorized:false` | OkHttp con TLS normal + config acotada al host |
+| cheerio | Jsoup |
+| 24 tools de `mcp/server.ts` | `DuticToolCatalog` + `DuticClient` |
+
+**19 de los 24 tools portados.** Los 5 restantes están declarados en el catálogo
+con estado `PENDING` en vez de omitidos, para que el hueco sea visible.
+
+#### Dónde vive cada tool en la UI
+
+El error a evitar era una pantalla con diecinueve botones: un *command palette*
+disfrazado de interfaz, que obliga al estudiante a saber qué herramienta responde
+su pregunta antes de poder hacerla.
+
+En una universidad todo cuelga del **curso** — sus tareas, sus notas, su
+material, su gente. Ese es el modelo mental real, así que es también el modelo de
+navegación: una pantalla de curso alcanza cuatro tools sin nombrar ninguna.
+
+| Tool | Dónde se llega |
+|---|---|
+| `list_tasks` | Aula › Tareas |
+| `get_course_tasks` | Curso › Tareas |
+| `get_assignment_detail` | Tocar una tarea |
+| `list_courses` | Aula › Cursos |
+| `get_course_contents` | Curso › Material (agrupa por sección) |
+| `list_course_materials` | Curso › Material |
+| `list_participants` | Curso › Gente |
+| `get_course_teachers` | Curso › Gente (docentes primero) |
+| `find_person` | Aula › Cursos › Buscar una persona |
+| `get_person_profile` | Tocar a una persona |
+| `get_grades` (curso) | Curso › Notas |
+| `get_grades` / `compare_grades` | Aula › Notas |
+| `session_status` · `whoami` | Cabecera del aula |
+| `refresh_session` | Pantalla de acceso |
+
+Tres no tienen entrada propia, a propósito:
+
+- **`get_course_teachers`** se resuelve filtrando la lista de participantes que
+  ya se pidió. Llamarlo sería una segunda petición idéntica con otro filtro.
+- **`list_course_files`** solo aporta sobre `list_course_materials` cuando hay
+  descargas, y las descargas están `PENDING`.
+- **`fetch_page`** es la vía de escape del módulo, no una función de usuario.
+
+Las secciones de un curso cargan **bajo demanda**, al abrir su pestaña por
+primera vez. Cargar las cuatro de golpe serían cuatro peticiones para una
+pantalla donde la mayoría abre una.
+
+Tres divergencias deliberadas respecto al CLI:
+
+1. **No se copia `rejectUnauthorized: false`.** En un móvil eso haría
+   falsificable cada petición en cualquier Wi-Fi. El *trust store* de Android es
+   tan amplio como el de Chrome; si algún dispositivo necesita la CA privada,
+   hay un `network_security_config.xml` **acotado a ese único host**.
+2. **Sin modo `interactive`.** El CLI abre un navegador a mitad de operación; un
+   móvil no puede secuestrar lo que estés haciendo. La expiración se reporta y
+   la UI decide cuándo mostrar el login.
+3. **La edad de la sesión nunca fuerza un refresco** — el servidor es la única
+   autoridad. El CLI aprendió que caducar por tiempo provocaba re-logins con la
+   sesión aún viva.
+
+#### Diseño de la pantalla
+
+La pantalla responde a una pregunta: *¿me falta entregar algo?* El héroe no es
+«tienes 12 tareas», es la **revelación**: cuántas hay realmente frente a cuántas
+te enseña el calendario. Ese contraste es la tesis del producto convertida en
+dato.
+
+Las tareas ocultas llevan **borde discontinuo**: en cualquier lenguaje visual,
+discontinuo significa provisional o no oficial — que es exactamente lo que son.
+No compite con el riel de urgencia, que se mantiene porque una entrega de la
+universidad *es* un plazo y el sistema ya dice que cálido = plazo. El color
+nunca va solo: la etiqueta «Oculta» lleva el significado en palabras.
+
+**Carga en dos pasadas.** Resolver el estado de entrega cuesta una petición HTTP
+por tarea, porque Moodle solo lo admite en la página de cada una. Así que se
+carga primero la lista del calendario (una llamada, casi instantánea) y el
+barrido completo va detrás, corrigiendo los números. La segunda pasada muestra
+una línea de progreso sobre datos ya legibles, nunca un spinner que los tape.
+
 ### Sistema de diseño
 
 La firma visual es el **riel de urgencia**: una barra en el borde de cada tarea
@@ -170,6 +266,14 @@ urge, así que esa escala no toma prestado ningún tono de urgencia.
 ## Estructura del proyecto
 
 ```text
+dutic/src/main/java/com/tien/dutic/
+  core/        DuticConfig · MoodleClient · SessionStore · TtlCache
+  auth/        DuticLogin (puro, testeable) · DuticAuthenticator
+  domain/      model/ · repository/
+  tools/       DuticToolCatalog — paridad 1:1 con el CLI
+  di/          DuticContainer
+  DuticClient.kt  — la única superficie pública
+
 app/src/main/
   java/com/tien/core/
     core/            result/ · time/          — utilidades transversales
@@ -178,7 +282,7 @@ app/src/main/
     di/              AppContainer             — grafo de objetos
     ui/
       designsystem/  theme/ · component/
-      feature/       notes/ · agenda/ · board/ · settings/
+      feature/       notes/ · agenda/ · board/ · dutic/ · settings/
       navigation/
   cpp/
     core/Models.h
@@ -302,6 +406,7 @@ Estado actual: 25 composables *restartable skippable*, 0 no-skippable. Los
 
 ```bash
 ./gradlew assembleDebug        # APK de depuración
+./gradlew :dutic:test          # tests del cliente del aula virtual
 ./gradlew testDebugUnitTest    # tests unitarios (JVM, sin dispositivo)
 ./gradlew assembleRelease      # APK optimizado con R8
 ```
