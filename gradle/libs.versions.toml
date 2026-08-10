@@ -22,7 +22,7 @@ jsoup = "1.18.1"
 detekt = "1.23.8"
 # 1.4.x builds against lint 31.x (AGP 8.x). 1.5.x moved to lint 32 / AGP 9 and
 # would be skipped at runtime by this AGP.
-composeLintChecks = "1.4.2"
+composeLintChecks = "1.5.4"
 leakcanary = "2.14"
 
 [libraries]
